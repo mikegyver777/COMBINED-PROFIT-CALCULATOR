@@ -106,73 +106,70 @@
   </div>
 
   <script>
+    // ---------- helpers ----------
+    const fmt = v => {
+      const n = Number.isFinite(v) ? v : parseFloat(String(v||0).replace(/[^\d.-]/g,''))||0;
+      return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    };
+    const num = v => {
+      if (v===undefined||v===null) return 0;
+      const n = parseFloat(String(v).replace(/[^\d.-]/g,'')); return Number.isFinite(n)?n:0;
+    };
+    const fee = (base, input) => {
+      const B = num(base);
+      if (input===undefined||input===null||String(input).trim()==='') return 0;
+      const raw = String(input).trim();
+      const hasPct = raw.includes('%');
+      const hasDol = raw.includes('$');
+      const n = num(raw);
+      if (hasDol) return n;
+      if (hasPct) return B*(n/100);
+      if (n>100) return n;
+      if (n>1) return B*(n/100);
+      if (n>0) return B*n;
+      return 0;
+    };
+    const dayIndex = d => ({Monday:0,Tuesday:1,Wednesday:2,Thursday:3,Friday:4,Saturday:5})[d] ?? 99;
+
+    // ---------- app ----------
     const app = {
       calculators: [],
       nextId: 1,
 
-      // ---------- UTIL ----------
-      fmt(v){
-        const n = Number.isFinite(v) ? v : parseFloat(String(v||0).replace(/[^\d.-]/g,''))||0;
-        return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-      },
-      num(v){
-        if (v===undefined||v===null) return 0;
-        const n = parseFloat(String(v).replace(/[^\d.-]/g,'')); return Number.isFinite(n)?n:0;
-      },
-      // robust fee parser (%, fraction, $)
-      fee(base, input){
-        const B = this.num(base);
-        if (input===undefined||input===null||String(input).trim()==='') return 0;
-        const raw = String(input).trim();
-        const hasPct = raw.includes('%');
-        const hasDol = raw.includes('$');
-        const n = this.num(raw);
-        if (hasDol) return n;
-        if (hasPct) return B * (n/100);
-        if (n>100) return n;
-        if (n>1) return B * (n/100);
-        if (n>0) return B * n;
-        return 0;
-      },
+      calc(c){
+        const contractAmount   = num(c.contractAmount);
+        const laborMaterial    = num(c.laborMaterial);
+        const houseFeePercent  = num(c.houseFeePercent);
+        const houseFeeAmount   = (contractAmount*houseFeePercent)/100;
 
-      // ---------- CORE MATH ----------
-      calc(data){
-        const contractAmount   = this.num(data.contractAmount);
-        const laborMaterial    = this.num(data.laborMaterial);
-        const houseFeePercent  = this.num(data.houseFeePercent);
-        const houseFeeAmount   = (contractAmount * houseFeePercent)/100;
-
-        const dealerFeeAmount     = this.fee(data.financeAmount, data.dealerFee);
-        const creditCardFeeAmount = this.fee(data.creditCard,    data.creditCardFee);
+        const dealerFeeAmount     = fee(c.financeAmount, c.dealerFee);
+        const creditCardFeeAmount = fee(c.creditCard,    c.creditCardFee);
 
         const afterHouseFee   = contractAmount - houseFeeAmount;
         const totalAfterFees  = afterHouseFee - laborMaterial - dealerFeeAmount;
         const percentOfContract = afterHouseFee>0 ? (totalAfterFees/afterHouseFee)*100 : 0;
 
-        let vetRate = 25; let repRate = 20;
+        let vetRate=25, repRate=20;
         if (percentOfContract>=50){ vetRate=55; repRate=40; }
         else if (percentOfContract>=40){ vetRate=45; repRate=30; }
         else if (percentOfContract>=33){ vetRate=35; repRate=25; }
 
-        const vets = this.num(data.numVets);
-        const reps = this.num(data.numReps);
+        const vets = num(c.numVets), reps = num(c.numReps);
         const people = Math.max(0, vets+reps);
 
-        const vetCommissionTotal = (totalAfterFees * vetRate)/100;
-        const repCommissionTotal = (totalAfterFees * repRate)/100;
+        const vetCommissionTotal = (totalAfterFees*vetRate)/100;
+        const repCommissionTotal = (totalAfterFees*repRate)/100;
 
-        const rideAlongCount = this.num(data.numRideAlongs);
-        const rideAlongEach  = this.num(data.rideAlong);
-        const rideAlongBonus = this.num(data.rideAlongBonus);
-        const rideAlongTotal = rideAlongEach * rideAlongCount + rideAlongBonus;
+        const rideAlongCount = num(c.numRideAlongs);
+        const rideAlongEach  = num(c.rideAlong);
+        const rideAlongBonus = num(c.rideAlongBonus);
+        const rideAlongFeeTotal = rideAlongEach*rideAlongCount;
+        const rideAlongTotal = rideAlongFeeTotal + rideAlongBonus;
 
-        const perPersonShared = people>0 ? (creditCardFeeAmount + rideAlongEach*rideAlongCount)/people : 0;
+        const perShared = people>0 ? (creditCardFeeAmount + rideAlongFeeTotal)/people : 0;
 
-        const perVetBase = people>0 ? vetCommissionTotal/people : 0;
-        const perRepBase = people>0 ? repCommissionTotal/people : 0;
-
-        const perVet = perVetBase - perPersonShared;
-        const perRep = perRepBase - perPersonShared;
+        const perVet = (people>0 ? vetCommissionTotal/people : 0) - perShared;
+        const perRep = (people>0 ? repCommissionTotal/people : 0) - perShared;
 
         const vetsTotal = perVet * vets;
         const repsTotal = perRep * reps;
@@ -180,14 +177,13 @@
         const altaCalTotalPayout = laborMaterial + vetsTotal + repsTotal + rideAlongTotal + creditCardFeeAmount;
         const preliminaryProfit  = afterHouseFee - altaCalTotalPayout - dealerFeeAmount;
 
-        // Additional team
-        const canvasserPayout = preliminaryProfit * (this.num(data.canvasserPercent)/100);
-        const confirmerPayout = contractAmount    * (this.num(data.confirmerPercent)/100);
-        const elisoPayout     = contractAmount    * (this.num(data.elisoPercent)/100);
-        const prodMSPayout    = this.num(data.prodMSAmount)  * (this.num(data.prodMSPercent)/100);
-        const prodRSPayout    = this.num(data.prodRSAmount)  * (this.num(data.prodRSPercent)/100);
-        const prodNCPayout    = this.num(data.prodNCAmount)  * (this.num(data.prodNCPercent)/100);
-        const prodABEPayout   = this.num(data.prodABEAmount) * (this.num(data.prodABEPercent)/100);
+        const canvasserPayout = preliminaryProfit * (num(c.canvasserPercent)/100);
+        const confirmerPayout = contractAmount    * (num(c.confirmerPercent)/100);
+        const elisoPayout     = contractAmount    * (num(c.elisoPercent)/100);
+        const prodMSPayout    = num(c.prodMSAmount)  * (num(c.prodMSPercent)/100);
+        const prodRSPayout    = num(c.prodRSAmount)  * (num(c.prodRSPercent)/100);
+        const prodNCPayout    = num(c.prodNCAmount)  * (num(c.prodNCPercent)/100);
+        const prodABEPayout   = num(c.prodABEAmount) * (num(c.prodABEPercent)/100);
 
         const additionalTeamPayout = canvasserPayout + confirmerPayout + elisoPayout +
                                      prodMSPayout + prodRSPayout + prodNCPayout + prodABEPayout;
@@ -198,56 +194,50 @@
 
         return {
           contractAmount, houseFeeAmount, dealerFeeAmount, creditCardFeeAmount, afterHouseFee,
-          totalAfterFees, percentOfContract, vetRate, repRate,
-          perVet, perRep, vetsTotal, repsTotal,
-          rideAlongTotal, altaCalTotalPayout, preliminaryProfit,
-          canvasserPayout, confirmerPayout, elisoPayout, prodMSPayout, prodRSPayout, prodNCPayout, prodABEPayout,
-          additionalTeamPayout, totalTeamPayout, finalProfit, profitPercent,
+          percentOfContract, vetRate, repRate,
+          perVet, perRep, vetsTotal, repsTotal, rideAlongTotal,
+          preliminaryProfit, canvasserPayout, confirmerPayout, elisoPayout, prodMSPayout, prodRSPayout, prodNCPayout, prodABEPayout,
+          totalTeamPayout, finalProfit, profitPercent,
           vets, reps, rideAlongCount
         };
       },
 
-      // ---------- RENDER ----------
       init(){
         document.getElementById('collectionWeek').addEventListener('input', () => this.updateSummary());
-        this.addCalculator(); // start with one
+        this.addCalculator();
       },
 
       addCalculator(){
-        const calc = {
+        const c = {
           id:this.nextId++,
           customerName:'', jobNumber:'', contractAmount:'', cashCheck:'', financeAmount:'',
           dealerFee:'', creditCard:'', creditCardFee:'', houseFeePercent:'', laborMaterial:'',
           numVets:'', numReps:'', rideAlong:'', rideAlongBonus:'', numRideAlongs:'',
           canvasserPercent:'2', confirmerPercent:'0.25', elisoPercent:'1.5',
           prodMSPercent:'0.25', prodMSAmount:'', prodRSPercent:'0.25', prodRSAmount:'',
-          prodNCPercent:'0.25', prodNCAmount:'',  prodABEPercent:'0.25', prodABEAmount:'',
+          prodNCPercent:'0.25', prodNCAmount:'', prodABEPercent:'0.25', prodABEAmount:'',
           moneyThisWeek:'', financeSource:'', bankDropDay:''
         };
-        this.calculators.push(calc);
-        this.renderCalculator(calc, this.calculators.length-1);
+        this.calculators.push(c);
+        this.renderCalculator(c, this.calculators.length-1);
         this.updateSummary();
       },
 
       deleteCalculator(id){
         if (this.calculators.length<=1){ alert('Cannot delete the last calculator'); return; }
         if (!confirm('Delete this calculator?')) return;
-        this.calculators = this.calculators.filter(c=>c.id!==id);
-        // re-render all cards once (rare action)
+        this.calculators = this.calculators.filter(x=>x.id!==id);
         document.getElementById('calculators').innerHTML='';
         this.calculators.forEach((c,i)=>this.renderCalculator(c,i));
         this.updateSummary();
       },
 
-      renderCalculator(calc, idx){
-        const wrap = document.createElement('div');
-        wrap.className = 'calculator';
-        wrap.id = `calc-${calc.id}`;
-
-        const delBtn = this.calculators.length>1 ? `<button class="delete-btn" onclick="app.deleteCalculator(${calc.id})">×</button>` : '';
-
-        wrap.innerHTML = `
-          ${delBtn}
+      renderCalculator(c, idx){
+        const root = document.createElement('div');
+        root.className='calculator'; root.id=`calc-${c.id}`;
+        const del = this.calculators.length>1 ? `<button class="delete-btn" onclick="app.deleteCalculator(${c.id})">×</button>` : '';
+        root.innerHTML = `
+          ${del}
           <div class="calc-header">
             <h2 style="font-size:18px;font-weight:700;">FILE #${idx+1}</h2>
             <button class="btn btn-blue" onclick="app.printSingle(${idx})" style="padding:10px 16px;">🖨️</button>
@@ -257,13 +247,11 @@
             <div class="form-grid" style="margin-bottom:20px;">
               <div class="form-group">
                 <label>JOB NUMBER</label>
-                <input type="text" inputmode="text" value="${calc.jobNumber}"
-                  oninput="app.updateField(${calc.id},'jobNumber',this.value)">
+                <input type="text" inputmode="text" value="${c.jobNumber}" oninput="app.updateField(${c.id},'jobNumber',this.value)">
               </div>
               <div class="form-group">
                 <label>CUSTOMER NAME</label>
-                <input type="text" inputmode="text" value="${calc.customerName}"
-                  oninput="app.updateField(${calc.id},'customerName',this.value)">
+                <input type="text" inputmode="text" value="${c.customerName}" oninput="app.updateField(${c.id},'customerName',this.value)">
               </div>
             </div>
 
@@ -271,72 +259,52 @@
               <div class="section-header blue">CONTRACT & PAYMENT</div>
               <div class="section-content">
                 <div class="form-grid">
-                  <div class="form-group">
-                    <label>CONTRACT AMOUNT</label>
-                    <div class="input-with-symbol">
-                      <span>$</span>
-                      <input type="text" inputmode="decimal" value="${calc.contractAmount}"
-                        oninput="app.updateField(${calc.id},'contractAmount',this.value)">
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>CASH/CHECK</label>
-                    <div class="input-with-symbol">
-                      <span>$</span>
-                      <input type="text" inputmode="decimal" value="${calc.cashCheck}"
-                        oninput="app.updateField(${calc.id},'cashCheck',this.value)">
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>LABOR & MATERIAL</label>
-                    <div class="input-with-symbol">
-                      <span>$</span>
-                      <input type="text" inputmode="decimal" value="${calc.laborMaterial}"
-                        oninput="app.updateField(${calc.id},'laborMaterial',this.value)">
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>FINANCE AMOUNT</label>
-                    <div class="input-with-symbol">
-                      <span>$</span>
-                      <input type="text" inputmode="decimal" value="${calc.financeAmount}"
-                        oninput="app.updateField(${calc.id},'financeAmount',this.value)">
-                    </div>
-                  </div>
+                  ${[
+                    ['CONTRACT AMOUNT','contractAmount', '$'],
+                    ['CASH/CHECK','cashCheck','$'],
+                    ['LABOR & MATERIAL','laborMaterial','$'],
+                    ['FINANCE AMOUNT','financeAmount','$']
+                  ].map(([label,key,sym])=>`
+                    <div class="form-group">
+                      <label>${label}</label>
+                      <div class="input-with-symbol">
+                        <span>${sym}</span>
+                        <input type="text" inputmode="decimal" value="${c[key]}" oninput="app.updateField(${c.id},'${key}',this.value)">
+                      </div>
+                    </div>`).join('')}
+
                   <div class="form-group">
                     <label>DEALER FEE (% or $)</label>
-                    <input type="text" inputmode="decimal" value="${calc.dealerFee}" placeholder="3.5 or $150"
-                      oninput="app.updateField(${calc.id},'dealerFee',this.value)">
-                    <div id="v-${calc.id}-dealerFeeAmount" style="text-align:center;font-weight:600;margin-top:5px;color:#2196F3;"></div>
+                    <input type="text" inputmode="decimal" value="${c.dealerFee}" placeholder="3.5 or $150" oninput="app.updateField(${c.id},'dealerFee',this.value)">
+                    <div id="v-${c.id}-dealer" style="text-align:center;font-weight:600;margin-top:5px;color:#2196F3;"></div>
                   </div>
+
                   <div class="form-group">
                     <label>HOUSE FEE %</label>
                     <div class="input-with-symbol">
-                      <input type="text" inputmode="decimal" value="${calc.houseFeePercent}"
-                        oninput="app.updateField(${calc.id},'houseFeePercent',this.value)">
+                      <input type="text" inputmode="decimal" value="${c.houseFeePercent}" oninput="app.updateField(${c.id},'houseFeePercent',this.value)">
                       <span>%</span>
                     </div>
-                    <div id="v-${calc.id}-houseFeeAmount" style="text-align:center;font-weight:600;margin-top:5px;"></div>
+                    <div id="v-${c.id}-house" style="text-align:center;font-weight:600;margin-top:5px;"></div>
                   </div>
+
                   <div class="form-group">
                     <label>CREDIT CARD</label>
                     <div class="input-with-symbol">
                       <span>$</span>
-                      <input type="text" inputmode="decimal" value="${calc.creditCard}"
-                        oninput="app.updateField(${calc.id},'creditCard',this.value)">
+                      <input type="text" inputmode="decimal" value="${c.creditCard}" oninput="app.updateField(${c.id},'creditCard',this.value)">
                     </div>
                   </div>
+
                   <div class="form-group">
                     <label>CC FEE (% or $)</label>
-                    <input type="text" inputmode="decimal" value="${calc.creditCardFee}" placeholder="3.5 or $35"
-                      oninput="app.updateField(${calc.id},'creditCardFee',this.value)">
-                    <div id="v-${calc.id}-creditCardFeeAmount" style="text-align:center;font-weight:600;margin-top:5px;color:#2196F3;"></div>
+                    <input type="text" inputmode="decimal" value="${c.creditCardFee}" placeholder="3.5 or $35" oninput="app.updateField(${c.id},'creditCardFee',this.value)">
+                    <div id="v-${c.id}-ccfee" style="text-align:center;font-weight:600;margin-top:5px;color:#2196F3;"></div>
                   </div>
+
                   <div class="form-group">
                     <label>AFTER HOUSE FEE</label>
-                    <div id="v-${calc.id}-afterHouseFee"
-                         style="text-align:center; padding:15px; background:#BBDEFB; border-radius:6px; font-weight:700; font-size:18px;">
-                    </div>
+                    <div id="v-${c.id}-after" style="text-align:center; padding:15px; background:#BBDEFB; border-radius:6px; font-weight:700; font-size:18px;"></div>
                   </div>
                 </div>
               </div>
@@ -346,47 +314,41 @@
               <div class="section-header green">ALTA CAL TEAM</div>
               <div class="section-content">
                 <div class="form-grid" style="margin-bottom:10px;">
-                  <div class="form-group">
-                    <label>VETS ON CONTRACT</label>
-                    <input type="text" inputmode="decimal" value="${calc.numVets}"
-                      oninput="app.updateField(${calc.id},'numVets',this.value)" style="text-align:center;font-size:18px;">
-                  </div>
-                  <div class="form-group">
-                    <label>REPS ON CONTRACT</label>
-                    <input type="text" inputmode="decimal" value="${calc.numReps}"
-                      oninput="app.updateField(${calc.id},'numReps',this.value)" style="text-align:center;font-size:18px;">
-                  </div>
-                  <div class="form-group">
-                    <label>RIDE ALONGS</label>
-                    <input type="text" inputmode="decimal" value="${calc.numRideAlongs}"
-                      oninput="app.updateField(${calc.id},'numRideAlongs',this.value)" style="text-align:center;font-size:18px;">
-                  </div>
+                  ${[
+                    ['VETS ON CONTRACT','numVets'],
+                    ['REPS ON CONTRACT','numReps'],
+                    ['RIDE ALONGS','numRideAlongs']
+                  ].map(([label,key])=>`
+                    <div class="form-group">
+                      <label>${label}</label>
+                      <input type="text" inputmode="decimal" value="${c[key]}" oninput="app.updateField(${c.id},'${key}',this.value)" style="text-align:center;font-size:18px;">
+                    </div>`).join('')}
                 </div>
 
-                <div class="tier-results" id="v-${calc.id}-tierBlock" style="display:none;">
-                  <div class="tier-info" id="v-${calc.id}-tierInfo"></div>
+                <div class="tier-results" id="v-${c.id}-tierWrap" style="display:none;">
+                  <div class="tier-info" id="v-${c.id}-tierInfo"></div>
                   <div class="tier-grid">
-                    <div class="tier-person" id="v-${calc.id}-vetsBox" style="display:none;">
-                      <div style="font-weight:700; text-align:center; margin-bottom:8px;" id="v-${calc.id}-vetsCount"></div>
+                    <div class="tier-person" id="v-${c.id}-vetsBox" style="display:none;">
+                      <div id="v-${c.id}-vetsCount" style="font-weight:700;text-align:center;margin-bottom:8px;"></div>
                       <div class="tier-box light">
                         <div class="tier-label">Per Vet</div>
-                        <div class="tier-value" style="color:#2E7D32;" id="v-${calc.id}-perVet"></div>
+                        <div class="tier-value" id="v-${c.id}-perVet" style="color:#2E7D32;"></div>
                       </div>
                       <div class="tier-box bold">
                         <div class="tier-label">Total</div>
-                        <div class="tier-value" style="color:#1B5E20;" id="v-${calc.id}-vetsTotal"></div>
+                        <div class="tier-value" id="v-${c.id}-vetsTotal" style="color:#1B5E20;"></div>
                       </div>
                     </div>
 
-                    <div class="tier-person" id="v-${calc.id}-repsBox" style="display:none;">
-                      <div style="font-weight:700; text-align:center; margin-bottom:8px;" id="v-${calc.id}-repsCount"></div>
+                    <div class="tier-person" id="v-${c.id}-repsBox" style="display:none;">
+                      <div id="v-${c.id}-repsCount" style="font-weight:700;text-align:center;margin-bottom:8px;"></div>
                       <div class="tier-box purple-light">
                         <div class="tier-label">Per Rep</div>
-                        <div class="tier-value" style="color:#6A1B9A;" id="v-${calc.id}-perRep"></div>
+                        <div class="tier-value" id="v-${c.id}-perRep" style="color:#6A1B9A;"></div>
                       </div>
                       <div class="tier-box purple-bold">
                         <div class="tier-label">Total</div>
-                        <div class="tier-value" style="color:#4A148C;" id="v-${calc.id}-repsTotal"></div>
+                        <div class="tier-value" id="v-${c.id}-repsTotal" style="color:#4A148C;"></div>
                       </div>
                     </div>
                   </div>
@@ -397,23 +359,19 @@
                     <label style="color:#D32F2F;">RIDE ALONG FEE (each)</label>
                     <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;">
                       <span>$</span>
-                      <input type="text" inputmode="decimal" value="${calc.rideAlong}"
-                        oninput="app.updateField(${calc.id},'rideAlong',this.value)" style="background:transparent;">
+                      <input type="text" inputmode="decimal" value="${c.rideAlong}" oninput="app.updateField(${c.id},'rideAlong',this.value)" style="background:transparent;">
                     </div>
                   </div>
                   <div class="form-group">
                     <label style="color:#D32F2F;">RIDE ALONG BONUS (flat)</label>
                     <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;">
                       <span>$</span>
-                      <input type="text" inputmode="decimal" value="${calc.rideAlongBonus}"
-                        oninput="app.updateField(${calc.id},'rideAlongBonus',this.value)" style="background:transparent;">
+                      <input type="text" inputmode="decimal" value="${c.rideAlongBonus}" oninput="app.updateField(${c.id},'rideAlongBonus',this.value)" style="background:transparent;">
                     </div>
                   </div>
-                  <div class="form-group" id="v-${calc.id}-ridePayoutWrap" style="display:none;">
+                  <div class="form-group" id="v-${c.id}-rideWrap" style="display:none;">
                     <label>RIDE ALONG PAYOUT</label>
-                    <div id="v-${calc.id}-rideAlongTotal"
-                         style="text-align:center; padding:12px; background:#FFCDD2; border:2px solid #EF5350; border-radius:6px; font-weight:700; font-size:16px;">
-                    </div>
+                    <div id="v-${c.id}-rideTotal" style="text-align:center; padding:12px; background:#FFCDD2; border:2px solid #EF5350; border-radius:6px; font-weight:700; font-size:16px;"></div>
                   </div>
                 </div>
               </div>
@@ -424,55 +382,40 @@
               <div class="section-content">
                 <div style="text-align:center; padding:12px; background:#E1BEE7; border:2px solid #9C27B0; border-radius:6px; font-weight:700; margin-bottom:12px;">
                   <div style="font-size:11px; margin-bottom:4px;">ALTA CAL PROFIT</div>
-                  <div id="v-${calc.id}-preProfit" style="font-size:18px;"></div>
+                  <div id="v-${c.id}-preProfit" style="font-size:18px;"></div>
                 </div>
 
                 <div class="form-grid">
-                  <div class="form-group">
-                    <label>CANVASSER %</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                      <input type="text" inputmode="decimal" value="${calc.canvasserPercent}"
-                        oninput="app.updateField(${calc.id},'canvasserPercent',this.value)" style="width:70px;">
-                      <span style="font-size:13px;">% = <span id="v-${calc.id}-canvasserP"></span></span>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>CONFIRMER %</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                      <input type="text" inputmode="decimal" value="${calc.confirmerPercent}"
-                        oninput="app.updateField(${calc.id},'confirmerPercent',this.value)" style="width:70px;">
-                      <span style="font-size:13px;">% = <span id="v-${calc.id}-confirmerP"></span></span>
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label>ELISO %</label>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                      <input type="text" inputmode="decimal" value="${calc.elisoPercent}"
-                        oninput="app.updateField(${calc.id},'elisoPercent',this.value)" style="width:70px;">
-                      <span style="font-size:13px;">% = <span id="v-${calc.id}-elisoP"></span></span>
-                    </div>
-                  </div>
+                  ${[
+                    ['CANVASSER %','canvasserPercent','canvasserAmt'],
+                    ['CONFIRMER %','confirmerPercent','confirmerAmt'],
+                    ['ELISO %','elisoPercent','elisoAmt'],
+                  ].map(([lbl,pct,idTxt])=>`
+                    <div class="form-group">
+                      <label>${lbl}</label>
+                      <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" inputmode="decimal" value="${c[pct]}" oninput="app.updateField(${c.id},'${pct}',this.value)" style="width:70px;">
+                        <span style="font-size:13px;">% = <span id="v-${c.id}-${idTxt}"></span></span>
+                      </div>
+                    </div>`).join('')}
                 </div>
 
                 <div class="form-grid" style="margin-top:12px;">
                   ${[
-                    ['MS','prodMSPercent','prodMSAmount','prodMSP'],
-                    ['RS','prodRSPercent','prodRSAmount','prodRSP'],
-                    ['NC','prodNCPercent','prodNCAmount','prodNCP'],
-                    ['ABE','prodABEPercent','prodABEAmount','prodABEP'],
-                  ].map(([lbl,pct,amt,vid])=>`
+                    ['MS','prodMSPercent','prodMSAmount','msAmt'],
+                    ['RS','prodRSPercent','prodRSAmount','rsAmt'],
+                    ['NC','prodNCPercent','prodNCAmount','ncAmt'],
+                    ['ABE','prodABEPercent','prodABEAmount','abeAmt'],
+                  ].map(([lbl,pct,amt,slot])=>`
                     <div class="form-group">
                       <label>PROD ${lbl}</label>
                       <div style="display:flex; gap:6px; align-items:center; font-size:13px;">
-                        <input type="text" inputmode="decimal" value="${calc[pct]}"
-                          oninput="app.updateField(${calc.id},'${pct}',this.value)" style="width:50px;">
+                        <input type="text" inputmode="decimal" value="${c[pct]}" oninput="app.updateField(${c.id},'${pct}',this.value)" style="width:50px;">
                         <span>%</span>
-                        <input type="text" inputmode="decimal" value="${calc[amt]}"
-                          oninput="app.updateField(${calc.id},'${amt}',this.value)" style="width:80px;">
-                        <span>= <span id="v-${calc.id}-${vid}"></span></span>
+                        <input type="text" inputmode="decimal" value="${c[amt]}" oninput="app.updateField(${c.id},'${amt}',this.value)" style="width:80px;">
+                        <span>= <span id="v-${c.id}-${slot}"></span></span>
                       </div>
-                    </div>
-                  `).join('')}
+                    </div>`).join('')}
                 </div>
               </div>
             </div>
@@ -485,25 +428,24 @@
                     <label>MONEY THIS WEEK</label>
                     <div class="input-with-symbol">
                       <span>$</span>
-                      <input type="text" inputmode="decimal" value="${calc.moneyThisWeek}"
-                        oninput="app.updateField(${calc.id},'moneyThisWeek',this.value)">
+                      <input type="text" inputmode="decimal" value="${c.moneyThisWeek}" oninput="app.updateField(${c.id},'moneyThisWeek',this.value)">
                     </div>
                   </div>
                   <div class="form-group">
                     <label>FINANCE SOURCE</label>
-                    <select oninput="app.updateField(${calc.id},'financeSource',this.value)">
-                      <option value="" ${calc.financeSource===''?'selected':''}>Select</option>
-                      <option value="Finance" ${calc.financeSource==='Finance'?'selected':''}>Finance</option>
-                      <option value="Cash" ${calc.financeSource==='Cash'?'selected':''}>Cash</option>
-                      <option value="Both" ${calc.financeSource==='Both'?'selected':''}>Both</option>
+                    <select oninput="app.updateField(${c.id},'financeSource',this.value)">
+                      <option value="" ${c.financeSource===''?'selected':''}>Select</option>
+                      <option value="Finance" ${c.financeSource==='Finance'?'selected':''}>Finance</option>
+                      <option value="Cash" ${c.financeSource==='Cash'?'selected':''}>Cash</option>
+                      <option value="Both" ${c.financeSource==='Both'?'selected':''}>Both</option>
                     </select>
                   </div>
                   <div class="form-group">
                     <label>BANK DROP DAY</label>
-                    <select oninput="app.updateField(${calc.id},'bankDropDay',this.value)">
-                      <option value="" ${calc.bankDropDay===''?'selected':''}>Select Day</option>
+                    <select oninput="app.updateField(${c.id},'bankDropDay',this.value)">
+                      <option value="" ${c.bankDropDay===''?'selected':''}>Select Day</option>
                       ${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`
-                        <option value="${d}" ${calc.bankDropDay===d?'selected':''}>${d}</option>`).join('')}
+                        <option value="${d}" ${c.bankDropDay===d?'selected':''}>${d}</option>`).join('')}
                     </select>
                   </div>
                 </div>
@@ -513,172 +455,158 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
               <div class="big-card blue">
                 <div class="label">ALTA CAL PAYOUT</div>
-                <div class="value" id="v-${calc.id}-totalTeamPayout"></div>
+                <div class="value" id="v-${c.id}-totalPayout"></div>
               </div>
               <div class="big-card green">
                 <div class="label">ALTA CAL PROFIT</div>
-                <div class="value" id="v-${calc.id}-finalProfit"></div>
+                <div class="value" id="v-${c.id}-finalProfit"></div>
               </div>
             </div>
           </div>
         `;
-        document.getElementById('calculators').appendChild(wrap);
-        this.updateComputed(calc.id); // initial fill of computed fields
+        document.getElementById('calculators').appendChild(root);
+        this.updateComputed(c.id);
       },
 
-      updateField(id, field, value){
-        const calc = this.calculators.find(c=>c.id===id);
-        if (!calc) return;
-        calc[field] = value;
-        this.updateComputed(id);   // update just this card
-        this.updateSummary();      // update top totals
+      updateField(id, key, val){
+        const c = this.calculators.find(x=>x.id===id);
+        if (!c) return;
+        c[key] = val;
+        this.updateComputed(id);
+        this.updateSummary();
       },
 
-      // update the computed text nodes for ONE calculator (no re-render; cursor stays)
       updateComputed(id){
-        const calc = this.calculators.find(c=>c.id===id);
-        if (!calc) return;
-        const d = this.calc(calc);
+        const c = this.calculators.find(x=>x.id===id);
+        if (!c) return;
+        const d = this.calc(c);
 
-        const set = (k, v) => { const el = document.getElementById(`v-${id}-${k}`); if (el) el.textContent = v; };
+        const set = (slot, value) => {
+          const el = document.getElementById(`v-${id}-${slot}`);
+          if (el) el.textContent = value;
+        };
 
-        set('dealerFeeAmount',    d.dealerFeeAmount>0 ? this.fmt(d.dealerFeeAmount) : '');
-        set('houseFeeAmount',     d.houseFeeAmount>0 ? this.fmt(d.houseFeeAmount) : '');
-        set('creditCardFeeAmount',d.creditCardFeeAmount>0 ? this.fmt(d.creditCardFeeAmount) : '');
-        set('afterHouseFee',      this.fmt(d.afterHouseFee));
+        set('dealer', d.dealerFeeAmount>0 ? fmt(d.dealerFeeAmount) : '');
+        set('house',  d.houseFeeAmount>0 ? fmt(d.houseFeeAmount) : '');
+        set('ccfee',  d.creditCardFeeAmount>0 ? fmt(d.creditCardFeeAmount) : '');
+        set('after',  fmt(d.afterHouseFee));
 
-        // Tier block
-        const tierBlock = document.getElementById(`v-${id}-tierBlock`);
-        const vetsBox   = document.getElementById(`v-${id}-vetsBox`);
-        const repsBox   = document.getElementById(`v-${id}-repsBox`);
-        if (tierBlock){
-          const any = (d.vets>0 || d.reps>0);
-          tierBlock.style.display = any ? '' : 'none';
-          if (any){
-            set('tierInfo', `Profit: ${d.percentOfContract.toFixed(1)}% → Vet: ${d.vetRate}% | Rep: ${d.repRate}%`);
-            if (d.vets>0){
-              vetsBox.style.display='';
-              set('vetsCount', `VETS: ${d.vets}`);
-              set('perVet', this.fmt(d.perVet));
-              set('vetsTotal', this.fmt(d.vetsTotal));
-            } else { vetsBox.style.display='none'; }
-            if (d.reps>0){
-              repsBox.style.display='';
-              set('repsCount', `REPS: ${d.reps}`);
-              set('perRep', this.fmt(d.perRep));
-              set('repsTotal', this.fmt(d.repsTotal));
-            } else { repsBox.style.display='none'; }
-          }
+        // tier block
+        const showTier = (d.vets>0 || d.reps>0);
+        const tierWrap = document.getElementById(`v-${id}-tierWrap`);
+        if (tierWrap) tierWrap.style.display = showTier ? '' : 'none';
+        if (showTier){
+          set('tierInfo', `Profit: ${d.percentOfContract.toFixed(1)}% → Vet: ${d.vetRate}% | Rep: ${d.repRate}%`);
+          const vb = document.getElementById(`v-${id}-vetsBox`);
+          const rb = document.getElementById(`v-${id}-repsBox`);
+          if (d.vets>0){
+            vb.style.display=''; set('vetsCount',`VETS: ${d.vets}`); set('perVet',fmt(d.perVet)); set('vetsTotal',fmt(d.vetsTotal));
+          } else { vb.style.display='none'; }
+          if (d.reps>0){
+            rb.style.display=''; set('repsCount',`REPS: ${d.reps}`); set('perRep',fmt(d.perRep)); set('repsTotal',fmt(d.repsTotal));
+          } else { rb.style.display='none'; }
         }
 
-        // Ride-along payout block visibility
-        const rideWrap = document.getElementById(`v-${id}-ridePayoutWrap`);
-        if (rideWrap) rideWrap.style.display = (d.rideAlongCount>0 || this.num(calc.rideAlongBonus)>0) ? '' : 'none';
-        set('rideAlongTotal', this.fmt(d.rideAlongTotal));
+        // ride along
+        const rideWrap = document.getElementById(`v-${id}-rideWrap`);
+        if (rideWrap) rideWrap.style.display = (d.rideAlongCount>0 || num(c.rideAlongBonus)>0) ? '' : 'none';
+        set('rideTotal', fmt(d.rideAlongTotal));
 
-        // Additional team amounts and bottom cards
-        set('preProfit', this.fmt(d.preliminaryProfit));
-        set('canvasserP', this.fmt(d.canvasserPayout));
-        set('confirmerP', this.fmt(d.confirmerPayout));
-        set('elisoP',     this.fmt(d.elisoPayout));
-        set('prodMSP',    this.fmt(d.prodMSPayout));
-        set('prodRSP',    this.fmt(d.prodRSPayout));
-        set('prodNCP',    this.fmt(d.prodNCPayout));
-        set('prodABEP',   this.fmt(d.prodABEPayout));
-        set('totalTeamPayout', this.fmt(d.totalTeamPayout));
-        set('finalProfit',     this.fmt(d.finalProfit));
+        // additional team + totals
+        set('preProfit', fmt(d.preliminaryProfit));
+        set('canvasserAmt', fmt(d.canvasserPayout));
+        set('confirmerAmt', fmt(d.confirmerPayout));
+        set('elisoAmt',     fmt(d.elisoPayout));
+        set('msAmt',        fmt(d.prodMSPayout));
+        set('rsAmt',        fmt(d.prodRSPayout));
+        set('ncAmt',        fmt(d.prodNCPayout));
+        set('abeAmt',       fmt(d.prodABEPayout));
+        set('totalPayout',  fmt(d.totalTeamPayout));
+        set('finalProfit',  fmt(d.finalProfit));
       },
 
       updateSummary(){
-        let totalPayout=0, totalProfit=0, totalMoney=0, base=0;
+        let totalPayout=0,totalProfit=0,totalMoney=0,base=0;
         this.calculators.forEach(c=>{
           const d = this.calc(c);
           totalPayout += d.totalTeamPayout;
           totalProfit += d.finalProfit;
-          totalMoney  += this.num(c.moneyThisWeek);
+          totalMoney  += num(c.moneyThisWeek);
           base        += (d.afterHouseFee - d.dealerFeeAmount);
         });
         const pct = base>0 ? (totalProfit/base)*100 : 0;
         document.getElementById('summaryCards').innerHTML = `
-          <div class="summary-card blue"><div class="label">TOTAL PAYOUT</div><div class="value">${this.fmt(totalPayout)}</div></div>
-          <div class="summary-card purple"><div class="label">TOTAL PROFIT</div><div class="value">${this.fmt(totalProfit)}</div></div>
+          <div class="summary-card blue"><div class="label">TOTAL PAYOUT</div><div class="value">${fmt(totalPayout)}</div></div>
+          <div class="summary-card purple"><div class="label">TOTAL PROFIT</div><div class="value">${fmt(totalProfit)}</div></div>
           <div class="summary-card green"><div class="label">PROFIT %</div><div class="value">${pct.toFixed(2)}%</div></div>
-          <div class="summary-card red"><div class="label">MONEY THIS WEEK</div><div class="value">${this.fmt(totalMoney)}</div></div>
+          <div class="summary-card red"><div class="label">MONEY THIS WEEK</div><div class="value">${fmt(totalMoney)}</div></div>
         `;
       },
 
-      // ---------- PRINT (unchanged logic; now correct because data correct) ----------
-      printSingle(index){
-        const calc = this.calculators[index];
-        const d = this.calc(calc);
+      printSingle(i){
+        const c = this.calculators[i];
+        const d = this.calc(c);
         const week = document.getElementById('collectionWeek').value || 'Not Specified';
         const html = `
           <div style="padding:20px;font-size:11px;">
             <h1 style="text-align:center;font-size:20px;margin-bottom:15px;border-bottom:2px solid #2196F3;padding-bottom:10px;">
-              FILE #${index+1} - ${calc.customerName || 'N/A'}
+              FILE #${i+1} - ${c.customerName || 'N/A'}
             </h1>
             ${week!=='Not Specified' ? `<div style="text-align:center;font-weight:700;margin-bottom:15px;">Week: ${week}</div>` : ''}
 
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px;">
               <div style="background:#BBDEFB;padding:10px;border-radius:4px;">
-                <strong>Contract:</strong> ${this.fmt(d.contractAmount)}<br/>
-                <strong>After House:</strong> ${this.fmt(d.afterHouseFee)}
+                <strong>Contract:</strong> ${fmt(d.contractAmount)}<br/>
+                <strong>After House:</strong> ${fmt(d.afterHouseFee)}
               </div>
               <div style="background:#C8E6C9;padding:10px;border-radius:4px;">
-                <strong>ALTA CAL Payout:</strong> ${this.fmt(d.totalTeamPayout)}<br/>
+                <strong>ALTA CAL Payout:</strong> ${fmt(d.totalTeamPayout)}<br/>
                 <strong>Profit Rate:</strong> ${d.percentOfContract.toFixed(1)}%
               </div>
               <div style="background:#E1BEE7;padding:10px;border-radius:4px;">
-                <strong>ALTA CAL Profit:</strong> ${this.fmt(d.finalProfit)}<br/>
+                <strong>ALTA CAL Profit:</strong> ${fmt(d.finalProfit)}<br/>
                 <strong>Vet ${d.vetRate}% | Rep ${d.repRate}%</strong>
               </div>
             </div>
-
-            ${(d.vets>0 || d.reps>0) ? `
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
-                ${d.vets>0 ? `
-                  <div style="border:2px solid #4CAF50;padding:10px;border-radius:4px;">
-                    <div style="font-weight:700;margin-bottom:5px;">VETS: ${d.vets}</div>
-                    <div>Per: ${this.fmt(d.perVet)}</div>
-                    <div><strong>Total: ${this.fmt(d.vetsTotal)}</strong></div>
-                  </div>` : '' }
-                ${d.reps>0 ? `
-                  <div style="border:2px solid #9C27B0;padding:10px;border-radius:4px;">
-                    <div style="font-weight:700;margin-bottom:5px;">REPS: ${d.reps}</div>
-                    <div>Per: ${this.fmt(d.perRep)}</div>
-                    <div><strong>Total: ${this.fmt(d.repsTotal)}</strong></div>
-                  </div>` : '' }
-              </div>` : ''}
-
-            <div class="no-print" style="margin-top:20px;text-align:center;">
-              <button onclick="window.print()" style="background:#2196F3;color:#fff;padding:12px 30px;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;margin-right:10px;">🖨️ PRINT</button>
-              <button onclick="app.closePrint()" style="background:#757575;color:#fff;padding:12px 30px;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;">CLOSE</button>
-            </div>
           </div>`;
         document.getElementById('printView').innerHTML = html;
-        document.getElementById('mainView').style.display = 'none';
-        document.getElementById('printView').style.display = 'block';
+        document.getElementById('mainView').style.display='none';
+        document.getElementById('printView').style.display='block';
       },
 
+      // COMBINED REPORT — includes Bank Drop Day column and sorts Monday→Saturday
       showPrintReport(){
         const week = document.getElementById('collectionWeek').value || 'Not Specified';
-        let totalPayout=0,totalProfit=0,totalMoney=0,base=0,rows='';
-        this.calculators.forEach((c,i)=>{
-          const d = this.calc(c);
-          totalPayout+=d.totalTeamPayout; totalProfit+=d.finalProfit; totalMoney+=this.num(c.moneyThisWeek); base+=(d.afterHouseFee-d.dealerFeeAmount);
-          rows += `
+
+        const rows = this.calculators
+          .map((c,i)=>({i, c, d:this.calc(c)}))
+          .sort((a,b)=>{
+            const da = dayIndex(a.c.bankDropDay), db = dayIndex(b.c.bankDropDay);
+            return da===db ? a.i - b.i : da - db;
+          })
+          .map(({i,c,d})=>`
             <tr>
               <td style="border:1px solid #000;padding:6px;text-align:center;">${i+1}</td>
               <td style="border:1px solid #000;padding:6px;">${c.jobNumber||'-'}</td>
               <td style="border:1px solid #000;padding:6px;">${c.customerName||'-'}</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;">${this.fmt(d.contractAmount)}</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;">${this.fmt(d.totalTeamPayout)}</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;">${this.fmt(d.finalProfit)}</td>
+              <td style="border:1px solid #000;padding:6px;text-align:right;">${fmt(d.contractAmount)}</td>
+              <td style="border:1px solid #000;padding:6px;text-align:right;">${fmt(d.totalTeamPayout)}</td>
+              <td style="border:1px solid #000;padding:6px;text-align:right;">${fmt(d.finalProfit)}</td>
               <td style="border:1px solid #000;padding:6px;text-align:right;">${d.profitPercent.toFixed(2)}%</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;font-weight:700;">${this.fmt(this.num(c.moneyThisWeek))}</td>
-            </tr>`;
-        });
-        const pct = base>0 ? (totalProfit/base)*100 : 0;
+              <td style="border:1px solid #000;padding:6px;text-align:center;">${c.bankDropDay||'-'}</td>
+              <td style="border:1px solid #000;padding:6px;text-align:right;font-weight:700;">${fmt(num(c.moneyThisWeek))}</td>
+            </tr>`).join('');
+
+        const totals = this.calculators.reduce((acc,c)=>{
+          const d = this.calc(c);
+          acc.payout += d.totalTeamPayout;
+          acc.profit += d.finalProfit;
+          acc.money  += num(c.moneyThisWeek);
+          acc.base   += (d.afterHouseFee - d.dealerFeeAmount);
+          return acc;
+        }, {payout:0, profit:0, money:0, base:0});
+        const pct = totals.base>0 ? (totals.profit/totals.base)*100 : 0;
+
         const html = `
           <div style="padding:20px;font-size:10px;">
             <h1 style="text-align:center;font-size:18px;margin-bottom:10px;">COMBINED PROFIT REPORT</h1>
@@ -693,33 +621,36 @@
                   <th style="border:1px solid #000;padding:8px;">Payout</th>
                   <th style="border:1px solid #000;padding:8px;">Profit</th>
                   <th style="border:1px solid #000;padding:8px;">%</th>
+                  <th style="border:1px solid #000;padding:8px;">Bank Day</th>
                   <th style="border:1px solid #000;padding:8px;">This Week</th>
                 </tr>
               </thead>
               <tbody>
-                ${rows}
+                ${rows || `<tr><td colspan="9" style="border:1px solid #000;padding:8px;text-align:center;">No rows</td></tr>`}
                 <tr style="background:#FFF9C4;font-weight:700;">
                   <td colspan="4" style="border:1px solid #000;padding:8px;text-align:right;">TOTALS:</td>
-                  <td style="border:1px solid #000;padding:8px;text-align:right;">${this.fmt(totalPayout)}</td>
-                  <td style="border:1px solid #000;padding:8px;text-align:right;">${this.fmt(totalProfit)}</td>
+                  <td style="border:1px solid #000;padding:8px;text-align:right;">${fmt(totals.payout)}</td>
+                  <td style="border:1px solid #000;padding:8px;text-align:right;">${fmt(totals.profit)}</td>
                   <td style="border:1px solid #000;padding:8px;text-align:right;">${pct.toFixed(2)}%</td>
-                  <td style="border:1px solid #000;padding:8px;text-align:right;">${this.fmt(totalMoney)}</td>
+                  <td style="border:1px solid #000;padding:8px;text-align:center;">—</td>
+                  <td style="border:1px solid #000;padding:8px;text-align:right;">${fmt(totals.money)}</td>
                 </tr>
               </tbody>
             </table>
+
             <div class="no-print" style="text-align:center;margin-top:20px;">
               <button onclick="window.print()" style="background:#2196F3;color:#fff;padding:12px 30px;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;margin-right:10px;">🖨️ PRINT</button>
               <button onclick="app.closePrint()" style="background:#757575;color:#fff;padding:12px 30px;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;">CLOSE</button>
             </div>
           </div>`;
         document.getElementById('printView').innerHTML = html;
-        document.getElementById('mainView').style.display = 'none';
-        document.getElementById('printView').style.display = 'block';
+        document.getElementById('mainView').style.display='none';
+        document.getElementById('printView').style.display='block';
       },
 
       closePrint(){
-        document.getElementById('mainView').style.display = 'block';
-        document.getElementById('printView').style.display = 'none';
+        document.getElementById('mainView').style.display='block';
+        document.getElementById('printView').style.display='none';
       },
 
       showSaveDialog(){
@@ -736,7 +667,8 @@
       }
     };
 
-    window.addEventListener('DOMContentLoaded',()=>app.init());
+    // define first, then register the listener (prevents “app is not defined”)
+    window.addEventListener('DOMContentLoaded', () => app.init());
   </script>
 </body>
 </html>
