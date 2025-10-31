@@ -73,13 +73,11 @@
     @media print { .no-print{ display:none !important; } .print-view{ display:block !important; } }
     .print-view { display:none; }
 
-    /* Bottom totals (unchanged look) */
     .footer-totals { margin:18px 0 8px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
     .footer-card { background:#fff; border:2px solid #e0e0e0; border-radius:10px; padding:14px; text-align:center; }
     .footer-card .label { font-size:12px; font-weight:700; color:#555; margin-bottom:6px; }
     .footer-card .value { font-size:22px; font-weight:800; }
 
-    /* EXACT original add button look */
     .add-btn { background:#2196F3; color:#fff; font-weight:700; padding:18px 35px; border-radius:50px; border:none; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:12px; margin:20px auto; }
     .add-btn .plus { font-size:24px; line-height:0; position:relative; top:1px; }
   </style>
@@ -181,7 +179,6 @@
       const totalRideAlongFee  = rideAlongFeeEach * rideAlongCount;
       const totalRideAlongPayout = totalRideAlongFee + rideAlongBonus;
 
-      // share CC fee + ride-along fee across vets+reps
       const perPersonSharedFees = totalPeople > 0 ? (creditCardFeeAmount + totalRideAlongFee) / totalPeople : 0;
       const perVetBase = totalPeople > 0 ? (vetCommissionTotal / totalPeople) : 0;
       const perRepBase = totalPeople > 0 ? (repCommissionTotal / totalPeople) : 0;
@@ -230,7 +227,7 @@
       return { totalPayout, totalProfit, totalMoney, profitPercent };
     }
 
-    // ---------- DOM (one-time build, then patch) ----------
+    // ---------- DOM builders ----------
     function feeDisplayHTML(key, style=''){ return `<div data-bind="${key}" data-money style="text-align:center; font-weight:600; margin-top:5px; ${style}">${fmtMoney(0)}</div>`; }
 
     function tierPerson(type){
@@ -413,33 +410,11 @@
                   </div>
                 </div>`).join('')}
               </div>
-            </div>
-          </div>
 
-          <div class="section">
-            <div class="section-header yellow">FINANCE & BANK</div>
-            <div class="section-content">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>MONEY THIS WEEK</label>
-                  <div class="input-with-symbol"><span>$</span><input type="text" data-field="moneyThisWeek" inputmode="decimal" /></div>
-                </div>
-                <div class="form-group">
-                  <label>FINANCE SOURCE</label>
-                  <select data-field="financeSource">
-                    <option value="">Select</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Both">Both</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>BANK DROP DAY</label>
-                  <select data-field="bankDropDay">
-                    <option value="">Select Day</option>
-                    <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
-                    <option>Thursday</option><option>Friday</option><option>Saturday</option>
-                  </select>
+              <!-- NEW: show the combined Additional Team total -->
+              <div style="margin-top:12px; text-align:center;">
+                <div style="display:inline-block; background:#f3e5f5; border:2px solid #9C27B0; border-radius:8px; padding:10px 14px; font-weight:800;">
+                  ADDITIONAL TEAM TOTAL: <span data-bind="additionalTeamPayout" data-money>${fmtMoney(0)}</span>
                 </div>
               </div>
             </div>
@@ -495,10 +470,13 @@
       const d = compute(calc);
 
       // money binds
-      ['afterHouseFee','houseFeeAmount','dealerFeeAmount','creditCardFeeAmount','totalRideAlongPayout',
-       'preliminaryProfit','canvasserPayout','confirmerPayout','elisoPayout',
-       'prodMSPayout','prodRSPayout','prodNCPayout','prodABEPayout','totalTeamPayout','finalProfit',
-       'finalPerVetPayout','finalPerRepPayout','finalTotalVetsPayout','finalTotalRepsPayout'
+      [
+        'afterHouseFee','houseFeeAmount','dealerFeeAmount','creditCardFeeAmount','totalRideAlongPayout',
+        'preliminaryProfit','canvasserPayout','confirmerPayout','elisoPayout',
+        'prodMSPayout','prodRSPayout','prodNCPayout','prodABEPayout',
+        'additionalTeamPayout', /* <-- added */
+        'totalTeamPayout','finalProfit',
+        'finalPerVetPayout','finalPerRepPayout','finalTotalVetsPayout','finalTotalRepsPayout'
       ].forEach(k=> setMoney(root,k,d[k]||0));
 
       // numeric binds
@@ -646,10 +624,21 @@
 
     // ---------- Boot & Events ----------
     document.addEventListener('DOMContentLoaded', ()=>{
-      addCalculator();
+      // first calculator
+      state.calculators.push({
+        id: state.nextId++,
+        customerName:'', jobNumber:'', contractAmount:'', cashCheck:'', financeAmount:'',
+        dealerFee:'', creditCard:'', creditCardFee:'', houseFeePercent:'', laborMaterial:'',
+        numVets:'', numReps:'', rideAlong:'', rideAlongBonus:'', numRideAlongs:'',
+        canvasserPercent:'2', confirmerPercent:'0.25', elisoPercent:'1.5',
+        prodMSPercent:'0.25', prodMSAmount:'', prodRSPercent:'0.25', prodRSAmount:'',
+        prodNCPercent:'0.25', prodNCAmount:'', prodABEPercent:'0.25', prodABEAmount:'',
+        moneyThisWeek:'', financeSource:'', bankDropDay:''
+      });
+
       renderAllOnce();
 
-      // input updates (no re-render; preserves cursor and iOS numeric keypad)
+      // input live updates
       document.getElementById('calculators').addEventListener('input',(e)=>{
         const root = e.target.closest('.calculator'); if(!root) return;
         const id = +root.getAttribute('data-calc-id');
@@ -674,7 +663,7 @@
         }
       });
 
-      document.getElementById('addBtn').addEventListener('click',()=>{ addCalculator(); renderAllOnce(); });
+      document.getElementById('addBtn').addEventListener('click',()=>{ state.calculators.push(JSON.parse(JSON.stringify(state.calculators[0]))); state.calculators[state.calculators.length-1].id = state.nextId++; renderAllOnce(); });
       document.getElementById('saveBtn').addEventListener('click',saveDialog);
       document.getElementById('printReportBtn').addEventListener('click',showPrintReport);
       document.getElementById('collectionWeek').addEventListener('input',renderTotals);
