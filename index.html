@@ -1,100 +1,100 @@
-<script>
-  app.showPrintReport = function () {
-    const week = document.getElementById('collectionWeek').value || 'Not Specified';
+showPrintReport() {
+  console.log('PRINT v3'); // sanity: must appear in console
 
-    // Build rows with computed values (include bankDropDay)
-    const rows = this.calculators.map((calc, idx) => {
-      const d = this.calculateOne(calc);
-      return {
-        idx,
-        job: calc.jobNumber || '-',
-        customer: calc.customerName || '-',
-        contract: d.contractAmount || 0,
-        payout: d.totalTeamPayout || 0,
-        profit: d.finalProfit || 0,
-        pct: d.profitPercent || 0,
-        thisWeek: this.parseValue(calc.moneyThisWeek) || 0,
-        bankDropDay: (calc.bankDropDay || '').trim()
-      };
-    });
+  const week = document.getElementById('collectionWeek').value || 'Not Specified';
 
-    // Sort Monday → Saturday; blanks last
-    const order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const rank = d => {
-      const i = order.indexOf((d || '').trim());
-      return i === -1 ? 999 : i;
+  // Build rows including Bank Drop Day
+  const rows = this.calculators.map((calc, idx) => {
+    const d = this.calculateOne(calc);
+    return {
+      idx,
+      job: calc.jobNumber || '-',
+      customer: calc.customerName || '-',
+      contract: d.contractAmount || 0,
+      payout: d.totalTeamPayout || 0,
+      profit: d.finalProfit || 0,
+      pct: d.profitPercent || 0,
+      thisWeek: this.parseValue(calc.moneyThisWeek) || 0,
+      bankDropDay: (calc.bankDropDay || '').trim()
     };
-    rows.sort((a,b) => {
-      const ra = rank(a.bankDropDay), rb = rank(b.bankDropDay);
-      if (ra !== rb) return ra - rb;
-      return a.idx - b.idx; // stable
-    });
+  });
 
-    // Totals
-    let totalPayout = 0, totalProfit = 0, totalMoney = 0, totalAfterHouse = 0;
-    this.calculators.forEach(c => {
-      const d = this.calculateOne(c);
-      totalPayout     += d.totalTeamPayout;
-      totalProfit     += d.finalProfit;
-      totalMoney      += this.parseValue(c.moneyThisWeek);
-      totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
-    });
-    const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
-
-    // Build table HTML (now includes Bank Drop Day)
-    const rowsHTML = rows.map((r,i) => `
-      <tr>
-        <td style="border:1px solid #000; padding:6px; text-align:center;">${i+1}</td>
-        <td style="border:1px solid #000; padding:6px;">${r.job}</td>
-        <td style="border:1px solid #000; padding:6px;">${r.customer}</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.contract)}</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.payout)}</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.profit)}</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right;">${r.pct.toFixed(2)}%</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right; font-weight:700;">${this.fmt(r.thisWeek)}</td>
-        <td style="border:1px solid #000; padding:6px; text-align:center;">${r.bankDropDay || '-'}</td>
-      </tr>
-    `).join('');
-
-    const html = `
-      <div style="padding:20px; font-size:10px;">
-        <h1 style="text-align:center; font-size:18px; margin-bottom:10px;">COMBINED PROFIT REPORT</h1>
-        ${week !== 'Not Specified' ? `<h2 style="text-align:center; font-size:14px; margin-bottom:15px;">Week: ${week}</h2>` : ''}
-
-        <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:20px;">
-          <thead>
-            <tr style="background:#e0e0e0;">
-              <th style="border:1px solid #000; padding:8px;">#</th>
-              <th style="border:1px solid #000; padding:8px;">Job</th>
-              <th style="border:1px solid #000; padding:8px;">Customer</th>
-              <th style="border:1px solid #000; padding:8px;">Contract</th>
-              <th style="border:1px solid #000; padding:8px;">Payout</th>
-              <th style="border:1px solid #000; padding:8px;">Profit</th>
-              <th style="border:1px solid #000; padding:8px;">%</th>
-              <th style="border:1px solid #000; padding:8px;">This Week</th>
-              <th style="border:1px solid #000; padding:8px;">Bank Drop Day</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHTML}
-            <tr style="background:#FFF9C4; font-weight:700;">
-              <td colspan="4" style="border:1px solid #000; padding:8px; text-align:right;">TOTALS:</td>
-              <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalPayout)}</td>
-              <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalProfit)}</td>
-              <td style="border:1px solid #000; padding:8px; text-align:right;">${profitPercent.toFixed(2)}%</td>
-              <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalMoney)}</td>
-              <td style="border:1px solid #000; padding:8px;"></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="no-print" style="margin-top:20px; text-align:center;">
-          <button onclick="window.print()" style="background:#2196F3; color:white; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
-          <button onclick="app.closePrint()" style="background:#757575; color:white; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
-        </div>
-      </div>`;
-    document.getElementById('printView').innerHTML = html;
-    document.getElementById('mainView').style.display = 'none';
-    document.getElementById('printView').style.display = 'block';
+  // Sort Monday → Saturday; blanks last
+  const order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const rank = d => {
+    const i = order.indexOf((d || '').trim());
+    return i === -1 ? 999 : i;
   };
-</script>
+  rows.sort((a,b) => {
+    const ra = rank(a.bankDropDay), rb = rank(b.bankDropDay);
+    if (ra !== rb) return ra - rb;
+    return a.idx - b.idx;
+  });
+
+  // Totals
+  let totalPayout = 0, totalProfit = 0, totalMoney = 0, totalAfterHouse = 0;
+  this.calculators.forEach(c => {
+    const d = this.calculateOne(c);
+    totalPayout     += d.totalTeamPayout;
+    totalProfit     += d.finalProfit;
+    totalMoney      += this.parseValue(c.moneyThisWeek);
+    totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
+  });
+  const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
+
+  // Table rows (includes Bank Drop Day column)
+  const rowsHTML = rows.map((r,i) => `
+    <tr>
+      <td style="border:1px solid #000; padding:6px; text-align:center;">${i+1}</td>
+      <td style="border:1px solid #000; padding:6px;">${r.job}</td>
+      <td style="border:1px solid #000; padding:6px;">${r.customer}</td>
+      <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.contract)}</td>
+      <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.payout)}</td>
+      <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.profit)}</td>
+      <td style="border:1px solid #000; padding:6px; text-align:right;">${r.pct.toFixed(2)}%</td>
+      <td style="border:1px solid #000; padding:6px; text-align:right; font-weight:700;">${this.fmt(r.thisWeek)}</td>
+      <td style="border:1px solid #000; padding:6px; text-align:center;">${r.bankDropDay || '-'}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <div style="padding:20px; font-size:10px;">
+      <h1 style="text-align:center; font-size:18px; margin-bottom:10px;">COMBINED PROFIT REPORT</h1>
+      ${week !== 'Not Specified' ? `<h2 style="text-align:center; font-size:14px; margin-bottom:15px;">Week: ${week}</h2>` : ''}
+
+      <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:20px;">
+        <thead>
+          <tr style="background:#e0e0e0;">
+            <th style="border:1px solid #000; padding:8px;">#</th>
+            <th style="border:1px solid #000; padding:8px;">Job</th>
+            <th style="border:1px solid #000; padding:8px;">Customer</th>
+            <th style="border:1px solid #000; padding:8px;">Contract</th>
+            <th style="border:1px solid #000; padding:8px;">Payout</th>
+            <th style="border:1px solid #000; padding:8px;">Profit</th>
+            <th style="border:1px solid #000; padding:8px;">%</th>
+            <th style="border:1px solid #000; padding:8px;">This Week</th>
+            <th style="border:1px solid #000; padding:8px;">Bank Drop Day</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHTML}
+          <tr style="background:#FFF9C4; font-weight:700;">
+            <td colspan="4" style="border:1px solid #000; padding:8px; text-align:right;">TOTALS:</td>
+            <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalPayout)}</td>
+            <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalProfit)}</td>
+            <td style="border:1px solid #000; padding:8px; text-align:right;">${profitPercent.toFixed(2)}%</td>
+            <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalMoney)}</td>
+            <td style="border:1px solid #000; padding:8px;"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="no-print" style="margin-top:20px; text-align:center;">
+        <button onclick="window.print()" style="background:#2196F3; color:white; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
+        <button onclick="app.closePrint()" style="background:#757575; color:white; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
+      </div>
+    </div>`;
+  document.getElementById('printView').innerHTML = html;
+  document.getElementById('mainView').style.display = 'none';
+  document.getElementById('printView').style.display = 'block';
+}
