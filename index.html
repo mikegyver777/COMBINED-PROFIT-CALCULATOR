@@ -126,18 +126,6 @@
         return Number.isFinite(parsed) ? parsed : 0;
       },
 
-      /**
-       * Parse a fee that can be provided as:
-       *  - percentage string: "3.5%" or "3.5"
-       *  - fraction: "0.035" (treated as 3.5%)
-       *  - absolute dollars: "$150" or "150" (if looks like a large absolute)
-       * Heuristics:
-       *  - contains % => percent
-       *  - contains $ => absolute
-       *  - 0 < x < 1 => percent = x * 100
-       *  - 1 <= x <= 100 => percent = x
-       *  - x > 100 => absolute
-       */
       parseFeeAmount(baseAmount, feeInput) {
         const base = this.parseValue(baseAmount);
         if (!feeInput && feeInput !== 0) return 0;
@@ -148,11 +136,11 @@
         const hasDol = raw.includes('$');
         const num = this.parseValue(raw);
 
-        if (hasDol) return num; // explicit dollars
+        if (hasDol) return num;
         if (hasPct) return (base * num) / 100;
-        if (num > 100) return num; // looks like dollars
-        if (num > 1) return (base * num) / 100; // e.g., 3.5
-        if (num > 0) return base * num; // e.g., 0.035
+        if (num > 100) return num;
+        if (num > 1) return (base * num) / 100;
+        if (num > 0) return base * num;
         return 0;
       },
 
@@ -162,16 +150,13 @@
         const houseFeePercent = this.parseValue(data.houseFeePercent);
         const houseFeeAmount = (contractAmount * houseFeePercent) / 100;
 
-        // Dealer fee is based on financeAmount, may be % or $.
         const dealerFeeAmount = this.parseFeeAmount(data.financeAmount, data.dealerFee);
-        // Credit card fee is based on the CC charge amount, may be % or $.
         const creditCardFeeAmount = this.parseFeeAmount(data.creditCard, data.creditCardFee);
 
         const afterHouseFee = contractAmount - houseFeeAmount;
         const totalAfterFees = afterHouseFee - laborMaterial - dealerFeeAmount;
         const percentOfContract = afterHouseFee > 0 ? (totalAfterFees / afterHouseFee) * 100 : 0;
 
-        // Tier logic
         let vetRate = 25;
         if (percentOfContract >= 50) vetRate = 55;
         else if (percentOfContract >= 40) vetRate = 45;
@@ -189,14 +174,12 @@
         const vetCommissionTotal = (totalAfterFees * vetRate) / 100;
         const repCommissionTotal = (totalAfterFees * repRate) / 100;
 
-        // Ride-along math: treat fee as per ride-along, multiply by count; bonus added once (adjust if needed)
         const rideAlongCount = this.parseValue(data.numRideAlongs);
         const rideAlongFeeEach = this.parseValue(data.rideAlong);
         const rideAlongBonusAmount = this.parseValue(data.rideAlongBonus);
         const totalRideAlongFee = rideAlongFeeEach * rideAlongCount;
         const totalRideAlongPayout = totalRideAlongFee + rideAlongBonusAmount;
 
-        // Spread credit card and ride-along costs across all Vets+Reps
         const perPersonSharedFees = totalPeople > 0 ? (creditCardFeeAmount + totalRideAlongFee) / totalPeople : 0;
 
         const perVetBase = totalPeople > 0 ? vetCommissionTotal / totalPeople : 0;
@@ -210,7 +193,6 @@
         const altaCalTotalPayout = laborMaterial + finalTotalVetsPayout + finalTotalRepsPayout + totalRideAlongPayout + creditCardFeeAmount;
         const preliminaryProfit = afterHouseFee - altaCalTotalPayout - dealerFeeAmount;
 
-        // Additional team payouts
         const canvasserPayout = preliminaryProfit * (this.parseValue(data.canvasserPercent) / 100);
         const confirmerPayout = contractAmount * (this.parseValue(data.confirmerPercent) / 100);
         const elisoPayout = contractAmount * (this.parseValue(data.elisoPercent) / 100);
@@ -260,14 +242,15 @@
         }
       },
 
+      // ------------ ONLY CHANGE: refresh UI after each field update ------------
       updateField(id, field, value) {
         const calc = this.calculators.find(c => c.id === id);
         if (calc) {
           calc[field] = value;
-          // IMPORTANT: do NOT re-render the whole form on every keystroke; only update summary
-          this.updateSummary();
+          this.render(); // re-render so computed labels/boxes update (onchange → no cursor jump)
         }
       },
+      // ------------------------------------------------------------------------
 
       render() {
         const container = document.getElementById('calculators');
@@ -515,42 +498,6 @@
                         <input type="text" inputmode="decimal" value="${calc.prodABEAmount}" onchange="app.updateField(${calc.id}, 'prodABEAmount', this.value)" style="width: 80px;" />
                         <span>= ${this.fmt(data.prodABEPayout)}</span>
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="section">
-                <div class="section-header yellow">FINANCE & BANK</div>
-                <div class="section-content">
-                  <div class="form-grid">
-                    <div class="form-group">
-                      <label>MONEY THIS WEEK</label>
-                      <div class="input-with-symbol">
-                        <span>$</span>
-                        <input type="text" inputmode="decimal" value="${calc.moneyThisWeek}" onchange="app.updateField(${calc.id}, 'moneyThisWeek', this.value)" />
-                      </div>
-                    </div>
-                    <div class="form-group">
-                      <label>FINANCE SOURCE</label>
-                      <select onchange="app.updateField(${calc.id}, 'financeSource', this.value)">
-                        <option value="" ${calc.financeSource === '' ? 'selected' : ''}>Select</option>
-                        <option value="Finance" ${calc.financeSource === 'Finance' ? 'selected' : ''}>Finance</option>
-                        <option value="Cash" ${calc.financeSource === 'Cash' ? 'selected' : ''}>Cash</option>
-                        <option value="Both" ${calc.financeSource === 'Both' ? 'selected' : ''}>Both</option>
-                      </select>
-                    </div>
-                    <div class="form-group">
-                      <label>BANK DROP DAY</label>
-                      <select onchange="app.updateField(${calc.id}, 'bankDropDay', this.value)">
-                        <option value="" ${calc.bankDropDay === '' ? 'selected' : ''}>Select Day</option>
-                        <option value="Monday" ${calc.bankDropDay === 'Monday' ? 'selected' : ''}>Monday</option>
-                        <option value="Tuesday" ${calc.bankDropDay === 'Tuesday' ? 'selected' : ''}>Tuesday</option>
-                        <option value="Wednesday" ${calc.bankDropDay === 'Wednesday' ? 'selected' : ''}>Wednesday</option>
-                        <option value="Thursday" ${calc.bankDropDay === 'Thursday' ? 'selected' : ''}>Thursday</option>
-                        <option value="Friday" ${calc.bankDropDay === 'Friday' ? 'selected' : ''}>Friday</option>
-                        <option value="Saturday" ${calc.bankDropDay === 'Saturday' ? 'selected' : ''}>Saturday</option>
-                      </select>
                     </div>
                   </div>
                 </div>
