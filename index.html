@@ -1,5 +1,5 @@
 showPrintReport() {
-  console.log('PRINT v3'); // sanity: must appear in console
+  console.log('PRINT v4'); // must appear in Console when you click PRINT
 
   const week = document.getElementById('collectionWeek').value || 'Not Specified';
 
@@ -42,7 +42,7 @@ showPrintReport() {
   });
   const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
 
-  // Table rows (includes Bank Drop Day column)
+  // Build sorted table with Bank Drop Day column
   const rowsHTML = rows.map((r,i) => `
     <tr>
       <td style="border:1px solid #000; padding:6px; text-align:center;">${i+1}</td>
@@ -73,7 +73,7 @@ showPrintReport() {
             <th style="border:1px solid #000; padding:8px;">Profit</th>
             <th style="border:1px solid #000; padding:8px;">%</th>
             <th style="border:1px solid #000; padding:8px;">This Week</th>
-            <th style="border:1px solid #000; padding:8px;">Bank Drop Day</th>
+            <th style="border:1px solid #000; padding:8px;">Bank Drop Day</th> <!-- NEW -->
           </tr>
         </thead>
         <tbody>
@@ -90,8 +90,8 @@ showPrintReport() {
       </table>
 
       <div class="no-print" style="margin-top:20px; text-align:center;">
-        <button onclick="window.print()" style="background:#2196F3; color:white; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
-        <button onclick="app.closePrint()" style="background:#757575; color:white; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
+        <button onclick="window.print()" style="background:#2196F3; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
+        <button onclick="app.closePrint()" style="background:#757575; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
       </div>
     </div>`;
   document.getElementById('printView').innerHTML = html;
