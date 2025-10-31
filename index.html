@@ -14,6 +14,8 @@
     .btn { padding:14px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer; touch-action:manipulation; }
     .btn-primary{ background:#4CAF50; color:#fff; }
     .btn-blue{ background:#2196F3; color:#fff; }
+    .btn-red{ background:#EF5350; color:#fff; }
+    .btn-gray{ background:#757575; color:#fff; }
 
     .header { background:#fff; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,.1); }
     .header h1 { color:#1976D2; font-size:24px; margin-bottom:15px; }
@@ -71,14 +73,15 @@
     @media print { .no-print{ display:none !important; } .print-view{ display:block !important; } }
     .print-view { display:none; }
 
-    /* Footer totals */
-    .footer-totals { margin:18px 0 8px 0; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+    /* Bottom totals (unchanged look) */
+    .footer-totals { margin:18px 0 8px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
     .footer-card { background:#fff; border:2px solid #e0e0e0; border-radius:10px; padding:14px; text-align:center; }
     .footer-card .label { font-size:12px; font-weight:700; color:#555; margin-bottom:6px; }
     .footer-card .value { font-size:22px; font-weight:800; }
 
-    /* Hide-on-zero helper */
-    .hide-when-zero[data-val="0"] { display:none; }
+    /* EXACT original add button look */
+    .add-btn { background:#2196F3; color:#fff; font-weight:700; padding:18px 35px; border-radius:50px; border:none; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:12px; margin:20px auto; }
+    .add-btn .plus { font-size:24px; line-height:0; position:relative; top:1px; }
   </style>
 </head>
 <body>
@@ -87,8 +90,8 @@
       <div class="header">
         <h1>COMBINED PROFIT CALCULATOR</h1>
         <div class="header-buttons">
-          <button id="saveBtn" class="btn btn-primary">💾 SAVE</button>
-          <button id="printReportBtn" class="btn btn-blue">🖨️ PRINT</button>
+          <button class="btn btn-primary" id="saveBtn">💾 SAVE</button>
+          <button class="btn btn-blue" id="printReportBtn">🖨️ PRINT</button>
         </div>
       </div>
 
@@ -103,7 +106,7 @@
       <div id="footerTotals" class="footer-totals"></div>
 
       <div style="text-align:center;">
-        <button id="addBtn" class="add-btn"><span style="font-size:24px;">+</span> ADD NEW FILE</button>
+        <button class="add-btn" id="addBtn"><span class="plus">+</span> ADD NEW FILE</button>
       </div>
     </div>
 
@@ -115,23 +118,24 @@
     const state = { calculators: [], nextId: 1 };
 
     // ---------- Utils ----------
-    const fmt = v => {
+    const fmtMoney = v => {
       const n = Number.isFinite(v) ? v : parseFloat(v || 0);
       return '$' + (n || 0).toFixed(2).replace(/\B(?=(\\d{3})+(?!\\d))/g, ',');
     };
-    const parseValue = v => {
+    const fmtNum = v => String(v);
+    const parseVal = v => {
       if (v === undefined || v === null) return 0;
       const p = parseFloat(String(v).replace(/[,$%]/g,'').trim());
       return Number.isFinite(p) ? p : 0;
     };
     const parseFeeAmount = (baseAmount, feeInput) => {
-      const base = parseValue(baseAmount);
+      const base = parseVal(baseAmount);
       if (!feeInput && feeInput !== 0) return 0;
       const raw = String(feeInput).trim();
       if (!raw) return 0;
       const hasPct = raw.includes('%');
       const hasDol = raw.includes('$');
-      const num = parseValue(raw);
+      const num = parseVal(raw);
       if (hasDol) return num;
       if (hasPct) return (base * num) / 100;
       if (num > 100) return num;
@@ -142,9 +146,9 @@
 
     // ---------- Math ----------
     function compute(calc){
-      const contractAmount   = parseValue(calc.contractAmount);
-      const laborMaterial    = parseValue(calc.laborMaterial);
-      const houseFeePercent  = parseValue(calc.houseFeePercent);
+      const contractAmount   = parseVal(calc.contractAmount);
+      const laborMaterial    = parseVal(calc.laborMaterial);
+      const houseFeePercent  = parseVal(calc.houseFeePercent);
       const houseFeeAmount   = (contractAmount * houseFeePercent) / 100;
 
       const dealerFeeAmount     = parseFeeAmount(calc.financeAmount, calc.dealerFee);
@@ -164,19 +168,20 @@
       else if (percentOfContract >= 40) repRate = 30;
       else if (percentOfContract >= 33) repRate = 25;
 
-      const vetsCount   = parseValue(calc.numVets);
-      const repsCount   = parseValue(calc.numReps);
+      const vetsCount   = parseVal(calc.numVets);
+      const repsCount   = parseVal(calc.numReps);
       const totalPeople = Math.max(0, vetsCount + repsCount);
 
       const vetCommissionTotal = (totalAfterFees * vetRate) / 100;
       const repCommissionTotal = (totalAfterFees * repRate) / 100;
 
-      const rideAlongCount     = parseValue(calc.numRideAlongs);
-      const rideAlongFeeEach   = parseValue(calc.rideAlong);
-      const rideAlongBonus     = parseValue(calc.rideAlongBonus);
+      const rideAlongCount     = parseVal(calc.numRideAlongs);
+      const rideAlongFeeEach   = parseVal(calc.rideAlong);
+      const rideAlongBonus     = parseVal(calc.rideAlongBonus);
       const totalRideAlongFee  = rideAlongFeeEach * rideAlongCount;
       const totalRideAlongPayout = totalRideAlongFee + rideAlongBonus;
 
+      // share CC fee + ride-along fee across vets+reps
       const perPersonSharedFees = totalPeople > 0 ? (creditCardFeeAmount + totalRideAlongFee) / totalPeople : 0;
       const perVetBase = totalPeople > 0 ? (vetCommissionTotal / totalPeople) : 0;
       const perRepBase = totalPeople > 0 ? (repCommissionTotal / totalPeople) : 0;
@@ -189,13 +194,13 @@
       const altaCalTotalPayout = laborMaterial + finalTotalVetsPayout + finalTotalRepsPayout + totalRideAlongPayout + creditCardFeeAmount;
       const preliminaryProfit  = afterHouseFee - altaCalTotalPayout - dealerFeeAmount;
 
-      const canvasserPayout = preliminaryProfit * (parseValue(calc.canvasserPercent) / 100);
-      const confirmerPayout = contractAmount   * (parseValue(calc.confirmerPercent) / 100);
-      const elisoPayout     = contractAmount   * (parseValue(calc.elisoPercent) / 100);
-      const prodMSPayout    = parseValue(calc.prodMSAmount)  * (parseValue(calc.prodMSPercent) / 100);
-      const prodRSPayout    = parseValue(calc.prodRSAmount)  * (parseValue(calc.prodRSPercent) / 100);
-      const prodNCPayout    = parseValue(calc.prodNCAmount)  * (parseValue(calc.prodNCPercent) / 100);
-      const prodABEPayout   = parseValue(calc.prodABEAmount) * (parseValue(calc.prodABEPercent) / 100);
+      const canvasserPayout = preliminaryProfit * (parseVal(calc.canvasserPercent) / 100);
+      const confirmerPayout = contractAmount   * (parseVal(calc.confirmerPercent) / 100);
+      const elisoPayout     = contractAmount   * (parseVal(calc.elisoPercent) / 100);
+      const prodMSPayout    = parseVal(calc.prodMSAmount)  * (parseVal(calc.prodMSPercent) / 100);
+      const prodRSPayout    = parseVal(calc.prodRSAmount)  * (parseVal(calc.prodRSPercent) / 100);
+      const prodNCPayout    = parseVal(calc.prodNCAmount)  * (parseVal(calc.prodNCPercent) / 100);
+      const prodABEPayout   = parseVal(calc.prodABEAmount) * (parseVal(calc.prodABEPercent) / 100);
 
       const additionalTeamPayout = canvasserPayout + confirmerPayout + elisoPayout + prodMSPayout + prodRSPayout + prodNCPayout + prodABEPayout;
       const totalTeamPayout      = altaCalTotalPayout + additionalTeamPayout;
@@ -218,50 +223,44 @@
         const d = compute(c);
         totalPayout     += d.totalTeamPayout;
         totalProfit     += d.finalProfit;
-        totalMoney      += parseValue(c.moneyThisWeek);
+        totalMoney      += parseVal(c.moneyThisWeek);
         totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
       });
       const profitPercent = totalAfterHouse>0 ? (totalProfit/totalAfterHouse)*100 : 0;
       return { totalPayout, totalProfit, totalMoney, profitPercent };
     }
 
-    // ---------- DOM builders (one-time) ----------
-    function feeDisplayHTML(key, color, extraStyle=''){
-      // always present; we toggle via data-val and CSS
-      return `<div class="fee-display ${key}" data-bind="${key}" data-val="0"
-                style="text-align:center; font-weight:600; margin-top:5px; ${extraStyle}">${fmt(0)}</div>`;
-    }
+    // ---------- DOM (one-time build, then patch) ----------
+    function feeDisplayHTML(key, style=''){ return `<div data-bind="${key}" data-money style="text-align:center; font-weight:600; margin-top:5px; ${style}">${fmtMoney(0)}</div>`; }
 
-    function tierBlockHTML(type){
-      const colorLight = type==='vet' ? '#2E7D32' : '#6A1B9A';
-      const colorBold  = type==='vet' ? '#1B5E20' : '#4A148C';
-      const labelType  = type==='vet' ? 'VETS' : 'REPS';
-      const bindPer    = type==='vet' ? 'finalPerVetPayout' : 'finalPerRepPayout';
-      const bindTotal  = type==='vet' ? 'finalTotalVetsPayout' : 'finalTotalRepsPayout';
-      const bindCount  = type==='vet' ? 'vetsCount' : 'repsCount';
+    function tierPerson(type){
+      const isVet = type==='vet';
+      const countKey  = isVet ? 'vetsCount' : 'repsCount';
+      const perKey    = isVet ? 'finalPerVetPayout' : 'finalPerRepPayout';
+      const totalKey  = isVet ? 'finalTotalVetsPayout' : 'finalTotalRepsPayout';
+      const colorLt   = isVet ? '#2E7D32' : '#6A1B9A';
+      const colorBd   = isVet ? '#1B5E20' : '#4A148C';
+      const boldClass = isVet ? 'bold' : 'purple-bold';
+      const label     = isVet ? 'VETS' : 'REPS';
       return `
-      <div class="tier-person" data-show-when="${bindCount}">
-        <div style="font-weight:700; text-align:center; margin-bottom:8px;">
-          ${labelType}: <span data-bind="${bindCount}">0</span>
-        </div>
-        <div class="tier-box light">
-          <div class="tier-label">Per ${type==='vet'?'Vet':'Rep'}</div>
-          <div class="tier-value" style="color:${colorLight};" data-bind="${bindPer}">${fmt(0)}</div>
-        </div>
-        <div class="tier-box ${type==='vet'?'bold':'purple-bold'}">
-          <div class="tier-label">Total</div>
-          <div class="tier-value" style="color:${colorBold};" data-bind="${bindTotal}">${fmt(0)}</div>
-        </div>
-      </div>`;
+        <div class="tier-person" data-visible-when="${countKey}">
+          <div style="font-weight:700; text-align:center; margin-bottom:8px;">${label}: <span data-bind="${countKey}" data-int>0</span></div>
+          <div class="tier-box light">
+            <div class="tier-label">Per ${isVet?'Vet':'Rep'}</div>
+            <div class="tier-value" style="color:${colorLt};" data-bind="${perKey}" data-money>${fmtMoney(0)}</div>
+          </div>
+          <div class="tier-box ${boldClass}">
+            <div class="tier-label">Total</div>
+            <div class="tier-value" style="color:${colorBd};" data-bind="${totalKey}" data-money>${fmtMoney(0)}</div>
+          </div>
+        </div>`;
     }
 
     function calcHTML(c, idx){
-      const delBtn = state.calculators.length>1
-        ? `<button class="delete-btn" data-role="delete" data-id="${c.id}">×</button>` : '';
-      // tabindex flows left→right by DOM order; no re-render on input preserves focus and iOS keyboard
+      const del = state.calculators.length>1 ? `<button class="delete-btn" data-role="delete" data-id="${c.id}">×</button>` : '';
       return `
       <div class="calculator" data-calc-id="${c.id}">
-        ${delBtn}
+        ${del}
         <div class="calc-header">
           <h2 style="font-size:18px; font-weight:700;">FILE #${idx+1}</h2>
           <button class="btn btn-blue" data-role="print-single" data-index="${idx}" style="padding:10px 16px;">🖨️</button>
@@ -285,55 +284,42 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label>CONTRACT AMOUNT</label>
-                  <div class="input-with-symbol"><span>$</span>
-                    <input type="text" data-field="contractAmount" inputmode="decimal" />
-                  </div>
+                  <div class="input-with-symbol"><span>$</span><input type="text" data-field="contractAmount" inputmode="decimal" /></div>
                 </div>
                 <div class="form-group">
                   <label>CASH/CHECK</label>
-                  <div class="input-with-symbol"><span>$</span>
-                    <input type="text" data-field="cashCheck" inputmode="decimal" />
-                  </div>
+                  <div class="input-with-symbol"><span>$</span><input type="text" data-field="cashCheck" inputmode="decimal" /></div>
                 </div>
                 <div class="form-group">
                   <label>LABOR & MATERIAL</label>
-                  <div class="input-with-symbol"><span>$</span>
-                    <input type="text" data-field="laborMaterial" inputmode="decimal" />
-                  </div>
+                  <div class="input-with-symbol"><span>$</span><input type="text" data-field="laborMaterial" inputmode="decimal" /></div>
                 </div>
                 <div class="form-group">
                   <label>FINANCE AMOUNT</label>
-                  <div class="input-with-symbol"><span>$</span>
-                    <input type="text" data-field="financeAmount" inputmode="decimal" />
-                  </div>
+                  <div class="input-with-symbol"><span>$</span><input type="text" data-field="financeAmount" inputmode="decimal" /></div>
                 </div>
                 <div class="form-group">
                   <label>DEALER FEE (% or $)</label>
                   <input type="text" data-field="dealerFee" inputmode="decimal" placeholder="3.5 or $150" />
-                  ${feeDisplayHTML('dealerFeeAmount','blue','color:#2196F3;')}
+                  ${feeDisplayHTML('dealerFeeAmount','color:#2196F3;')}
                 </div>
                 <div class="form-group">
                   <label>HOUSE FEE %</label>
-                  <div class="input-with-symbol">
-                    <input type="text" data-field="houseFeePercent" inputmode="decimal" /><span>%</span>
-                  </div>
-                  ${feeDisplayHTML('houseFeeAmount','','')}
+                  <div class="input-with-symbol"><input type="text" data-field="houseFeePercent" inputmode="decimal" /><span>%</span></div>
+                  <div data-bind="houseFeeAmount" data-money style="text-align:center; font-weight:600; margin-top:5px;">${fmtMoney(0)}</div>
                 </div>
                 <div class="form-group">
                   <label>CREDIT CARD</label>
-                  <div class="input-with-symbol"><span>$</span>
-                    <input type="text" data-field="creditCard" inputmode="decimal" />
-                  </div>
+                  <div class="input-with-symbol"><span>$</span><input type="text" data-field="creditCard" inputmode="decimal" /></div>
                 </div>
                 <div class="form-group">
                   <label>CC FEE (% or $)</label>
                   <input type="text" data-field="creditCardFee" inputmode="decimal" placeholder="3.5 or $35" />
-                  ${feeDisplayHTML('creditCardFeeAmount','blue','color:#2196F3;')}
+                  ${feeDisplayHTML('creditCardFeeAmount','color:#2196F3;')}
                 </div>
                 <div class="form-group">
                   <label>AFTER HOUSE FEE</label>
-                  <div style="text-align:center; padding:15px; background:#BBDEFB; border-radius:6px; font-weight:700; font-size:18px;"
-                       data-bind="afterHouseFee">${fmt(0)}</div>
+                  <div style="text-align:center; padding:15px; background:#BBDEFB; border-radius:6px; font-weight:700; font-size:18px;" data-bind="afterHouseFee" data-money>${fmtMoney(0)}</div>
                 </div>
               </div>
             </div>
@@ -357,33 +343,28 @@
                 </div>
               </div>
 
-              <div class="tier-results" data-bind-block="tier">
+              <div class="tier-results">
                 <div class="tier-info">
-                  Profit: <span data-bind="percentOfContract">0.0</span>% → Vet: <span data-bind="vetRate">25</span>% | Rep: <span data-bind="repRate">20</span>%
+                  Profit: <span data-bind="percentOfContract" data-percent>0.0</span>% → Vet: <span data-bind="vetRate" data-int>25</span>% | Rep: <span data-bind="repRate" data-int>20</span>%
                 </div>
                 <div class="tier-grid">
-                  ${tierBlockHTML('vet')}
-                  ${tierBlockHTML('rep')}
+                  ${tierPerson('vet')}
+                  ${tierPerson('rep')}
                 </div>
               </div>
 
               <div class="form-grid" style="margin-top:10px;">
                 <div class="form-group">
                   <label style="color:#D32F2F;">RIDE ALONG FEE (each)</label>
-                  <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;">
-                    <span>$</span><input type="text" data-field="rideAlong" inputmode="decimal" style="background:transparent;" />
-                  </div>
+                  <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;"><span>$</span><input type="text" data-field="rideAlong" inputmode="decimal" style="background:transparent;" /></div>
                 </div>
                 <div class="form-group">
                   <label style="color:#D32F2F;">RIDE ALONG BONUS (flat)</label>
-                  <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;">
-                    <span>$</span><input type="text" data-field="rideAlongBonus" inputmode="decimal" style="background:transparent;" />
-                  </div>
+                  <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;"><span>$</span><input type="text" data-field="rideAlongBonus" inputmode="decimal" style="background:transparent;" /></div>
                 </div>
-                <div class="form-group hide-when-zero" data-val="0" data-show-when="numRideAlongs">
+                <div class="form-group" data-visible-when="numRideAlongs">
                   <label>RIDE ALONG PAYOUT</label>
-                  <div style="text-align:center; padding:12px; background:#FFCDD2; border:2px solid #EF5350; border-radius:6px; font-weight:700; font-size:16px;"
-                       data-bind="totalRideAlongPayout">${fmt(0)}</div>
+                  <div style="text-align:center; padding:12px; background:#FFCDD2; border:2px solid #EF5350; border-radius:6px; font-weight:700; font-size:16px;" data-bind="totalRideAlongPayout" data-money>${fmtMoney(0)}</div>
                 </div>
               </div>
             </div>
@@ -394,7 +375,7 @@
             <div class="section-content">
               <div style="text-align:center; padding:12px; background:#E1BEE7; border:2px solid #9C27B0; border-radius:6px; font-weight:700; margin-bottom:12px;">
                 <div style="font-size:11px; margin-bottom:4px;">ALTA CAL PROFIT</div>
-                <div style="font-size:18px;" data-bind="preliminaryProfit">${fmt(0)}</div>
+                <div style="font-size:18px;" data-bind="preliminaryProfit" data-money>${fmtMoney(0)}</div>
               </div>
 
               <div class="form-grid">
@@ -402,37 +383,35 @@
                   <label>CANVASSER %</label>
                   <div style="display:flex; gap:8px; align-items:center;">
                     <input type="text" data-field="canvasserPercent" inputmode="decimal" style="width:70px;" />
-                    <span style="font-size:13px;">% = <span data-bind="canvasserPayout">${fmt(0)}</span></span>
+                    <span style="font-size:13px;">% = <span data-bind="canvasserPayout" data-money>${fmtMoney(0)}</span></span>
                   </div>
                 </div>
                 <div class="form-group">
                   <label>CONFIRMER %</label>
                   <div style="display:flex; gap:8px; align-items:center;">
                     <input type="text" data-field="confirmerPercent" inputmode="decimal" style="width:70px;" />
-                    <span style="font-size:13px;">% = <span data-bind="confirmerPayout">${fmt(0)}</span></span>
+                    <span style="font-size:13px;">% = <span data-bind="confirmerPayout" data-money>${fmtMoney(0)}</span></span>
                   </div>
                 </div>
                 <div class="form-group">
                   <label>ELISO %</label>
                   <div style="display:flex; gap:8px; align-items:center;">
                     <input type="text" data-field="elisoPercent" inputmode="decimal" style="width:70px;" />
-                    <span style="font-size:13px;">% = <span data-bind="elisoPayout">${fmt(0)}</span></span>
+                    <span style="font-size:13px;">% = <span data-bind="elisoPayout" data-money>${fmtMoney(0)}</span></span>
                   </div>
                 </div>
               </div>
 
               <div class="form-grid" style="margin-top:12px;">
-                <!-- Four producer lines -->
                 ${['MS','RS','NC','ABE'].map(tag=>`
-                  <div class="form-group">
-                    <label>PROD ${tag}</label>
-                    <div style="display:flex; gap:6px; align-items:center; font-size:13px;">
-                      <input type="text" data-field="prod${tag}Percent" inputmode="decimal" style="width:50px;" /><span>%</span>
-                      <input type="text" data-field="prod${tag}Amount"  inputmode="decimal" style="width:80px;" />
-                      <span>= <span data-bind="prod${tag}Payout">${fmt(0)}</span></span>
-                    </div>
+                <div class="form-group">
+                  <label>PROD ${tag}</label>
+                  <div style="display:flex; gap:6px; align-items:center; font-size:13px;">
+                    <input type="text" data-field="prod${tag}Percent" inputmode="decimal" style="width:50px;" /><span>%</span>
+                    <input type="text" data-field="prod${tag}Amount"  inputmode="decimal" style="width:80px;" />
+                    <span>= <span data-bind="prod${tag}Payout" data-money>${fmtMoney(0)}</span></span>
                   </div>
-                `).join('')}
+                </div>`).join('')}
               </div>
             </div>
           </div>
@@ -443,9 +422,7 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label>MONEY THIS WEEK</label>
-                  <div class="input-with-symbol"><span>$</span>
-                    <input type="text" data-field="moneyThisWeek" inputmode="decimal" />
-                  </div>
+                  <div class="input-with-symbol"><span>$</span><input type="text" data-field="moneyThisWeek" inputmode="decimal" /></div>
                 </div>
                 <div class="form-group">
                   <label>FINANCE SOURCE</label>
@@ -471,100 +448,86 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
             <div class="big-card" style="--c1:#42A5F5;--c2:#2196F3;">
               <div class="label">ALTA CAL PAYOUT</div>
-              <div class="value" data-bind="totalTeamPayout">${fmt(0)}</div>
+              <div class="value" data-bind="totalTeamPayout" data-money>${fmtMoney(0)}</div>
             </div>
             <div class="big-card" style="--c1:#4CAF50;--c2:#45a049;">
               <div class="label">ALTA CAL PROFIT</div>
-              <div class="value" data-bind="finalProfit">${fmt(0)}</div>
+              <div class="value" data-bind="finalProfit" data-money>${fmtMoney(0)}</div>
             </div>
           </div>
         </div>
       </div>`;
     }
 
-    // ---------- Render helpers (one-time create, then patch) ----------
     function renderAllOnce(){
       const wrap = document.getElementById('calculators');
       wrap.innerHTML = state.calculators.map((c,i)=>calcHTML(c,i)).join('');
-      // seed values into inputs
-      state.calculators.forEach((c)=>{
+      state.calculators.forEach(c=>{
         const root = document.querySelector(`.calculator[data-calc-id="${c.id}"]`);
         if (!root) return;
         root.querySelectorAll('input[data-field],select[data-field]').forEach(el=>{
-          const f = el.getAttribute('data-field');
-          if (f in c) el.value = c[f] ?? '';
+          const f = el.getAttribute('data-field'); el.value = c[f] ?? '';
         });
-        updateOutputs(c.id); // initial numbers
+        updateOutputs(c.id);
       });
-      renderTopAndFooterTotals();
+      renderTotals();
     }
 
-    function setBind(root, key, value){
-      root.querySelectorAll(`[data-bind="${key}"]`).forEach(el=>{
-        el.textContent = (typeof value==='number') ? fmt(value) : String(value);
-      });
-      // for hide-when-zero toggles
-      root.querySelectorAll(`.hide-when-zero [data-bind="${key}"]`).forEach(el=>{
-        const box = el.closest('.hide-when-zero');
-        if (box) box.setAttribute('data-val', (+value===0 ? '0' : '1'));
-      });
-      // generic visibility: any container asking to show when key nonzero
-      root.querySelectorAll(`[data-show-when="${key}"]`).forEach(el=>{
-        if (+value>0) el.style.display = '';
-        else el.style.display = 'none';
-      });
+    // patchers
+    function setMoney(root,key,val){
+      root.querySelectorAll(`[data-bind="${key}"][data-money]`).forEach(el=>{ el.textContent = fmtMoney(val); });
     }
-
-    function setValToggle(root, key, value){
-      root.querySelectorAll(`[data-bind="${key}"]`).forEach(el=>{
-        el.textContent = fmt(value);
-      });
-      root.querySelectorAll(`[data-bind="${key}"]`).forEach(el=>{
-        const box = el.closest('[data-val]');
-        if (box) box.setAttribute('data-val', (+value===0 ? '0' : '1'));
+    function setInt(root,key,val){
+      root.querySelectorAll(`[data-bind="${key}"][data-int]`).forEach(el=>{ el.textContent = fmtNum(val); });
+    }
+    function setPercent(root,key,val){
+      root.querySelectorAll(`[data-bind="${key}"][data-percent]`).forEach(el=>{ el.textContent = (+val).toFixed(1); });
+    }
+    function toggleVisible(root,key,val){
+      root.querySelectorAll(`[data-visible-when="${key}"]`).forEach(el=>{
+        el.style.display = (+val>0) ? '' : 'none';
       });
     }
 
     function updateOutputs(calcId){
-      const calc = state.calculators.find(x=>x.id===calcId);
-      if (!calc) return;
-      const root = document.querySelector(`.calculator[data-calc-id="${calcId}"]`);
-      if (!root) return;
+      const calc = state.calculators.find(x=>x.id===calcId); if(!calc) return;
+      const root = document.querySelector(`.calculator[data-calc-id="${calcId}"]`); if(!root) return;
       const d = compute(calc);
 
-      // simple numbers
-      ['afterHouseFee','preliminaryProfit','percentOfContract','vetRate','repRate',
-       'finalPerVetPayout','finalPerRepPayout','finalTotalVetsPayout','finalTotalRepsPayout',
-       'totalRideAlongPayout','totalTeamPayout','finalProfit',
-       'vetsCount','repsCount','houseFeeAmount'].forEach(k=>{
-        const val = (k==='percentOfContract') ? d[k].toFixed(1)
-                  : (k==='vetRate'||k==='repRate'||k==='vetsCount'||k==='repsCount') ? d[k]
-                  : d[k];
-        setBind(root, k, val);
-      });
+      // money binds
+      ['afterHouseFee','houseFeeAmount','dealerFeeAmount','creditCardFeeAmount','totalRideAlongPayout',
+       'preliminaryProfit','canvasserPayout','confirmerPayout','elisoPayout',
+       'prodMSPayout','prodRSPayout','prodNCPayout','prodABEPayout','totalTeamPayout','finalProfit',
+       'finalPerVetPayout','finalPerRepPayout','finalTotalVetsPayout','finalTotalRepsPayout'
+      ].forEach(k=> setMoney(root,k,d[k]||0));
 
-      // fee displays with hide-on-zero
-      setValToggle(root,'dealerFeeAmount', d.dealerFeeAmount);
-      setValToggle(root,'creditCardFeeAmount', d.creditCardFeeAmount);
+      // numeric binds
+      setPercent(root,'percentOfContract', d.percentOfContract || 0);
+      setInt(root,'vetRate', d.vetRate || 0);
+      setInt(root,'repRate', d.repRate || 0);
+      setInt(root,'vetsCount', d.vetsCount || 0);
+      setInt(root,'repsCount', d.repsCount || 0);
 
-      // refresh top/footer totals without touching inputs
-      renderTopAndFooterTotals();
+      // visibility of vet/rep blocks and ride-along payout
+      toggleVisible(root,'vetsCount', d.vetsCount||0);
+      toggleVisible(root,'repsCount', d.repsCount||0);
+      toggleVisible(root,'numRideAlongs', d.numRideAlongs||0);
+
+      renderTotals();
     }
 
-    function renderTopAndFooterTotals(){
+    function renderTotals(){
       const a = aggregate();
       document.getElementById('summaryCards').innerHTML = `
-        <div class="summary-card blue"><div class="label">TOTAL PAYOUT</div><div class="value">${fmt(a.totalPayout)}</div></div>
-        <div class="summary-card purple"><div class="label">TOTAL PROFIT</div><div class="value">${fmt(a.totalProfit)}</div></div>
+        <div class="summary-card blue"><div class="label">TOTAL PAYOUT</div><div class="value">${fmtMoney(a.totalPayout)}</div></div>
+        <div class="summary-card purple"><div class="label">TOTAL PROFIT</div><div class="value">${fmtMoney(a.totalProfit)}</div></div>
         <div class="summary-card green"><div class="label">PROFIT %</div><div class="value">${a.profitPercent.toFixed(2)}%</div></div>
-        <div class="summary-card red"><div class="label">MONEY THIS WEEK</div><div class="value">${fmt(a.totalMoney)}</div></div>
-      `;
+        <div class="summary-card red"><div class="label">MONEY THIS WEEK</div><div class="value">${fmtMoney(a.totalMoney)}</div></div>`;
       document.getElementById('footerTotals').innerHTML = `
-        <div class="footer-card"><div class="label">TOTAL PAYOUT</div><div class="value">${fmt(a.totalPayout)}</div></div>
-        <div class="footer-card"><div class="label">TOTAL PROFIT</div><div class="value">${fmt(a.totalProfit)}</div></div>
+        <div class="footer-card"><div class="label">TOTAL PAYOUT</div><div class="value">${fmtMoney(a.totalPayout)}</div></div>
+        <div class="footer-card"><div class="label">TOTAL PROFIT</div><div class="value">${fmtMoney(a.totalProfit)}</div></div>
         <div class="footer-card"><div class="label">PROFIT %</div><div class="value">${a.profitPercent.toFixed(2)}%</div></div>
-        <div class="footer-card"><div class="label">MONEY THIS WEEK</div><div class="value">${fmt(a.totalMoney)}</div></div>
-      `;
+        <div class="footer-card"><div class="label">MONEY THIS WEEK</div><div class="value">${fmtMoney(a.totalMoney)}</div></div>`;
     }
 
     // ---------- Actions ----------
@@ -590,39 +553,17 @@
           <h1 style="text-align:center; font-size:20px; margin-bottom:15px; border-bottom:2px solid #2196F3; padding-bottom:10px;">
             FILE #${index + 1} - ${c.customerName || 'N/A'}
           </h1>
-          ${week !== 'Not Specified' ? `<div style="text-align:center; font-weight:700; margin-bottom:15px;">Week: ${week}</div>` : ''}
-
+          ${week!=='Not Specified'?`<div style="text-align:center; font-weight:700; margin-bottom:15px;">Week: ${week}</div>`:''}
           <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:15px;">
-            <div style="background:#BBDEFB; padding:10px; border-radius:4px;">
-              <strong>Contract:</strong> ${fmt(d.contractAmount)}<br />
-              <strong>After House:</strong> ${fmt(d.afterHouseFee)}
-            </div>
-            <div style="background:#C8E6C9; padding:10px; border-radius:4px;">
-              <strong>ALTA CAL Payout:</strong> ${fmt(d.totalTeamPayout)}<br />
-              <strong>Profit Rate:</strong> ${d.percentOfContract.toFixed(1)}%
-            </div>
-            <div style="background:#E1BEE7; padding:10px; border-radius:4px;">
-              <strong>ALTA CAL Profit:</strong> ${fmt(d.finalProfit)}<br />
-              <strong>Vet ${d.vetRate}% | Rep ${d.repRate}%</strong>
-            </div>
+            <div style="background:#BBDEFB; padding:10px; border-radius:4px;"><strong>Contract:</strong> ${fmtMoney(d.contractAmount)}<br><strong>After House:</strong> ${fmtMoney(d.afterHouseFee)}</div>
+            <div style="background:#C8E6C9; padding:10px; border-radius:4px;"><strong>ALTA CAL Payout:</strong> ${fmtMoney(d.totalTeamPayout)}<br><strong>Profit Rate:</strong> ${d.percentOfContract.toFixed(1)}%</div>
+            <div style="background:#E1BEE7; padding:10px; border-radius:4px;"><strong>ALTA CAL Profit:</strong> ${fmtMoney(d.finalProfit)}<br><strong>Vet ${d.vetRate}% | Rep ${d.repRate}%</strong></div>
           </div>
-
-          ${(d.vetsCount > 0 || d.repsCount > 0) ? `
+          ${(d.vetsCount>0||d.repsCount>0)?`
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
-              ${d.vetsCount > 0 ? `
-                <div style="border:2px solid #4CAF50; padding:10px; border-radius:4px;">
-                  <div style="font-weight:700; margin-bottom:5px;">VETS: ${d.vetsCount}</div>
-                  <div>Per: ${fmt(d.finalPerVetPayout)}</div>
-                  <div><strong>Total: ${fmt(d.finalTotalVetsPayout)}</strong></div>
-                </div>` : ``}
-              ${d.repsCount > 0 ? `
-                <div style="border:2px solid #9C27B0; padding:10px; border-radius:4px;">
-                  <div style="font-weight:700; margin-bottom:5px;">REPS: ${d.repsCount}</div>
-                  <div>Per: ${fmt(d.finalPerRepPayout)}</div>
-                  <div><strong>Total: ${fmt(d.finalTotalRepsPayout)}</strong></div>
-                </div>` : ``}
-            </div>` : ``}
-
+              ${d.vetsCount>0?`<div style="border:2px solid #4CAF50; padding:10px; border-radius:4px;"><div style="font-weight:700; margin-bottom:5px;">VETS: ${d.vetsCount}</div><div>Per: ${fmtMoney(d.finalPerVetPayout)}</div><div><strong>Total: ${fmtMoney(d.finalTotalVetsPayout)}</strong></div></div>`:''}
+              ${d.repsCount>0?`<div style="border:2px solid #9C27B0; padding:10px; border-radius:4px;"><div style="font-weight:700; margin-bottom:5px;">REPS: ${d.repsCount}</div><div>Per: ${fmtMoney(d.finalPerRepPayout)}</div><div><strong>Total: ${fmtMoney(d.finalTotalRepsPayout)}</strong></div></div>`:''}
+            </div>`:''}
           <div class="no-print" style="margin-top:20px; text-align:center;">
             <button onclick="window.print()" style="background:#2196F3; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
             <button id="closePrintBtn" style="background:#757575; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
@@ -631,64 +572,53 @@
       document.getElementById('printView').innerHTML = html;
       document.getElementById('mainView').style.display = 'none';
       document.getElementById('printView').style.display = 'block';
-      document.getElementById('closePrintBtn').onclick = () => {
-        document.getElementById('mainView').style.display = 'block';
-        document.getElementById('printView').style.display = 'none';
-      };
+      document.getElementById('closePrintBtn').onclick = ()=>{ document.getElementById('mainView').style.display='block'; document.getElementById('printView').style.display='none'; };
     }
 
     function showPrintReport(){
       const week = document.getElementById('collectionWeek').value || 'Not Specified';
-      let totalPayout=0, totalProfit=0, totalMoney=0, totalAfterHouse=0, rows='';
+      let totalPayout=0,totalProfit=0,totalMoney=0,totalAfterHouse=0,rows='';
       state.calculators.forEach((c,idx)=>{
         const d = compute(c);
-        totalPayout     += d.totalTeamPayout;
-        totalProfit     += d.finalProfit;
-        totalMoney      += parseValue(c.moneyThisWeek);
-        totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
-        rows += `
-          <tr>
-            <td style="border:1px solid #000; padding:6px; text-align:center;">${idx + 1}</td>
-            <td style="border:1px solid #000; padding:6px;">${c.jobNumber || '-'}</td>
-            <td style="border:1px solid #000; padding:6px;">${c.customerName || '-'}</td>
-            <td style="border:1px solid #000; padding:6px; text-align:right;">${fmt(d.contractAmount)}</td>
-            <td style="border:1px solid #000; padding:6px; text-align:right;">${fmt(d.totalTeamPayout)}</td>
-            <td style="border:1px solid #000; padding:6px; text-align:right;">${fmt(d.finalProfit)}</td>
-            <td style="border:1px solid #000; padding:6px; text-align:right;">${d.profitPercent.toFixed(2)}%</td>
-            <td style="border:1px solid #000; padding:6px; text-align:right; font-weight:700;">${fmt(parseValue(c.moneyThisWeek))}</td>
-          </tr>`;
+        totalPayout+=d.totalTeamPayout; totalProfit+=d.finalProfit; totalMoney+=parseVal(c.moneyThisWeek); totalAfterHouse+=(d.afterHouseFee-d.dealerFeeAmount);
+        rows += `<tr>
+          <td style="border:1px solid #000; padding:6px; text-align:center;">${idx+1}</td>
+          <td style="border:1px solid #000; padding:6px;">${c.jobNumber||'-'}</td>
+          <td style="border:1px solid #000; padding:6px;">${c.customerName||'-'}</td>
+          <td style="border:1px solid #000; padding:6px; text-align:right;">${fmtMoney(d.contractAmount)}</td>
+          <td style="border:1px solid #000; padding:6px; text-align:right;">${fmtMoney(d.totalTeamPayout)}</td>
+          <td style="border:1px solid #000; padding:6px; text-align:right;">${fmtMoney(d.finalProfit)}</td>
+          <td style="border:1px solid #000; padding:6px; text-align:right;">${d.profitPercent.toFixed(2)}%</td>
+          <td style="border:1px solid #000; padding:6px; text-align:right; font-weight:700;">${fmtMoney(parseVal(c.moneyThisWeek))}</td>
+        </tr>`;
       });
       const profitPercent = totalAfterHouse>0 ? (totalProfit/totalAfterHouse)*100 : 0;
       const html = `
         <div style="padding:20px; font-size:10px;">
           <h1 style="text-align:center; font-size:18px; margin-bottom:10px;">COMBINED PROFIT REPORT</h1>
-          ${week !== 'Not Specified' ? `<h2 style="text-align:center; font-size:14px; margin-bottom:15px;">Week: ${week}</h2>` : ''}
-
+          ${week!=='Not Specified'?`<h2 style="text-align:center; font-size:14px; margin-bottom:15px;">Week: ${week}</h2>`:''}
           <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:20px;">
-            <thead>
-              <tr style="background:#e0e0e0;">
-                <th style="border:1px solid #000; padding:8px;">#</th>
-                <th style="border:1px solid #000; padding:8px;">Job</th>
-                <th style="border:1px solid #000; padding:8px;">Customer</th>
-                <th style="border:1px solid #000; padding:8px;">Contract</th>
-                <th style="border:1px solid #000; padding:8px;">Payout</th>
-                <th style="border:1px solid #000; padding:8px;">Profit</th>
-                <th style="border:1px solid #000; padding:8px;">%</th>
-                <th style="border:1px solid #000; padding:8px;">This Week</th>
-              </tr>
-            </thead>
+            <thead><tr style="background:#e0e0e0;">
+              <th style="border:1px solid #000; padding:8px;">#</th>
+              <th style="border:1px solid #000; padding:8px;">Job</th>
+              <th style="border:1px solid #000; padding:8px;">Customer</th>
+              <th style="border:1px solid #000; padding:8px;">Contract</th>
+              <th style="border:1px solid #000; padding:8px;">Payout</th>
+              <th style="border:1px solid #000; padding:8px;">Profit</th>
+              <th style="border:1px solid #000; padding:8px;">%</th>
+              <th style="border:1px solid #000; padding:8px;">This Week</th>
+            </tr></thead>
             <tbody>
               ${rows}
               <tr style="background:#FFF9C4; font-weight:700;">
                 <td colspan="4" style="border:1px solid #000; padding:8px; text-align:right;">TOTALS:</td>
-                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(totalPayout)}</td>
-                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(totalProfit)}</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmtMoney(totalPayout)}</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmtMoney(totalProfit)}</td>
                 <td style="border:1px solid #000; padding:8px; text-align:right;">${profitPercent.toFixed(2)}%</td>
-                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(totalMoney)}</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmtMoney(totalMoney)}</td>
               </tr>
             </tbody>
           </table>
-
           <div class="no-print" style="margin-top:20px; text-align:center;">
             <button onclick="window.print()" style="background:#2196F3; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
             <button id="closePrintBtn2" style="background:#757575; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
@@ -697,10 +627,7 @@
       document.getElementById('printView').innerHTML = html;
       document.getElementById('mainView').style.display = 'none';
       document.getElementById('printView').style.display = 'block';
-      document.getElementById('closePrintBtn2').onclick = () => {
-        document.getElementById('mainView').style.display = 'block';
-        document.getElementById('printView').style.display = 'none';
-      };
+      document.getElementById('closePrintBtn2').onclick = ()=>{ document.getElementById('mainView').style.display='block'; document.getElementById('printView').style.display='none'; };
     }
 
     function saveDialog(){
@@ -719,66 +646,38 @@
 
     // ---------- Boot & Events ----------
     document.addEventListener('DOMContentLoaded', ()=>{
-      addCalculator(); // at least one calc
-      // one-time render
+      addCalculator();
       renderAllOnce();
 
-      // seed defaults that matter for keyboard behaviour
-      state.calculators.forEach(c=>{
-        c.canvasserPercent='2'; c.confirmerPercent='0.25'; c.elisoPercent='1.5';
-        c.prodMSPercent='0.25'; c.prodRSPercent='0.25'; c.prodNCPercent='0.25'; c.prodABEPercent='0.25';
-      });
-      // write seeds into DOM inputs
-      state.calculators.forEach(c=>{
-        const root = document.querySelector(`.calculator[data-calc-id="${c.id}"]`);
-        if (!root) return;
-        root.querySelectorAll('input[data-field],select[data-field]').forEach(el=>{
-          const f = el.getAttribute('data-field'); el.value = c[f] ?? el.value ?? '';
-        });
-        updateOutputs(c.id);
-      });
-
-      // Field input: update state + outputs ONLY (no re-render, keeps focus & iOS keypad)
-      document.getElementById('calculators').addEventListener('input', (e)=>{
+      // input updates (no re-render; preserves cursor and iOS numeric keypad)
+      document.getElementById('calculators').addEventListener('input',(e)=>{
         const root = e.target.closest('.calculator'); if(!root) return;
-        const id   = parseInt(root.getAttribute('data-calc-id'),10);
-        const f    = e.target.getAttribute('data-field'); if(!f) return;
-        const v    = e.target.value;
-        const c    = state.calculators.find(x=>x.id===id);
-        if(!c) return;
-        c[f] = v;
+        const id = +root.getAttribute('data-calc-id');
+        const f  = e.target.getAttribute('data-field'); if(!f) return;
+        const c  = state.calculators.find(x=>x.id===id); if(!c) return;
+        c[f] = e.target.value;
         updateOutputs(id);
       });
 
-      // Click handlers
+      // delete / print single
       document.getElementById('calculators').addEventListener('click',(e)=>{
         const btn = e.target.closest('[data-role]'); if(!btn) return;
         const role = btn.getAttribute('data-role');
-        if(role==='delete'){
-          if(state.calculators.length<=1){ alert('Cannot delete the last calculator'); return; }
-          const id = parseInt(btn.getAttribute('data-id'),10);
-          // remove from state then re-render once
+        if (role==='delete'){
+          if (state.calculators.length<=1){ alert('Cannot delete the last calculator'); return; }
+          const id = +btn.getAttribute('data-id');
           state.calculators = state.calculators.filter(x=>x.id!==id);
-          document.getElementById('calculators').innerHTML = '';
           renderAllOnce();
-        }
-        if(role==='print-single'){
-          const index = parseInt(btn.getAttribute('data-index'),10);
-          printSingle(index);
+        } else if (role==='print-single'){
+          const idx = +btn.getAttribute('data-index');
+          printSingle(idx);
         }
       });
 
-      // Week input affects only top/bottom summaries
-      document.getElementById('collectionWeek').addEventListener('input', renderTopAndFooterTotals);
-
-      // Global buttons
-      document.getElementById('addBtn').addEventListener('click', ()=>{
-        addCalculator();
-        // re-render once to add a new calculator block (inputs retain focus on the old one)
-        renderAllOnce();
-      });
-      document.getElementById('saveBtn').addEventListener('click', saveDialog);
-      document.getElementById('printReportBtn').addEventListener('click', showPrintReport);
+      document.getElementById('addBtn').addEventListener('click',()=>{ addCalculator(); renderAllOnce(); });
+      document.getElementById('saveBtn').addEventListener('click',saveDialog);
+      document.getElementById('printReportBtn').addEventListener('click',showPrintReport);
+      document.getElementById('collectionWeek').addEventListener('input',renderTotals);
     });
   </script>
 </body>
