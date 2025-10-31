@@ -1,59 +1,57 @@
 <script>
-  function showPrintReport(){
+  app.showPrintReport = function () {
     const week = document.getElementById('collectionWeek').value || 'Not Specified';
 
-    // 1) Build an array of rows with computed values
-    const rowsData = state.calculators.map((c, idx) => {
-      const d = compute(c);
+    // Build rows with computed values (include bankDropDay)
+    const rows = this.calculators.map((calc, idx) => {
+      const d = this.calculateOne(calc);
       return {
         idx,
-        jobNumber: c.jobNumber || '-',
-        customerName: c.customerName || '-',
+        job: calc.jobNumber || '-',
+        customer: calc.customerName || '-',
         contract: d.contractAmount || 0,
         payout: d.totalTeamPayout || 0,
         profit: d.finalProfit || 0,
         pct: d.profitPercent || 0,
-        thisWeek: parseVal(c.moneyThisWeek) || 0,
-        bankDropDay: (c.bankDropDay || '').trim()  // <-- used for sorting & display
+        thisWeek: this.parseValue(calc.moneyThisWeek) || 0,
+        bankDropDay: (calc.bankDropDay || '').trim()
       };
     });
 
-    // 2) Sort Monday → Saturday (unknown/blank at the end)
+    // Sort Monday → Saturday; blanks last
     const order = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const rank = day => {
-      const i = order.indexOf((day || '').trim());
+    const rank = d => {
+      const i = order.indexOf((d || '').trim());
       return i === -1 ? 999 : i;
     };
-    rowsData.sort((a, b) => {
-      const rA = rank(a.bankDropDay);
-      const rB = rank(b.bankDropDay);
-      if (rA !== rB) return rA - rB;
-      // stable secondary: original index
-      return a.idx - b.idx;
+    rows.sort((a,b) => {
+      const ra = rank(a.bankDropDay), rb = rank(b.bankDropDay);
+      if (ra !== rb) return ra - rb;
+      return a.idx - b.idx; // stable
     });
 
-    // 3) Aggregate totals (post-sort; totals unaffected by order)
+    // Totals
     let totalPayout = 0, totalProfit = 0, totalMoney = 0, totalAfterHouse = 0;
-    state.calculators.forEach(c => {
-      const d = compute(c);
+    this.calculators.forEach(c => {
+      const d = this.calculateOne(c);
       totalPayout     += d.totalTeamPayout;
       totalProfit     += d.finalProfit;
-      totalMoney      += parseVal(c.moneyThisWeek);
+      totalMoney      += this.parseValue(c.moneyThisWeek);
       totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
     });
     const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
 
-    // 4) Build table rows (now sorted) and include Bank Drop Day column
-    const rowsHTML = rowsData.map((r, i) => `
+    // Build table HTML (now includes Bank Drop Day)
+    const rowsHTML = rows.map((r,i) => `
       <tr>
-        <td style="border:1px solid #000; padding:6px; text-align:center;">${i + 1}</td>
-        <td style="border:1px solid #000; padding:6px;">${r.jobNumber}</td>
-        <td style="border:1px solid #000; padding:6px;">${r.customerName}</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right;">${fmtMoney(r.contract)}</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right;">${fmtMoney(r.payout)}</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right;">${fmtMoney(r.profit)}</td>
+        <td style="border:1px solid #000; padding:6px; text-align:center;">${i+1}</td>
+        <td style="border:1px solid #000; padding:6px;">${r.job}</td>
+        <td style="border:1px solid #000; padding:6px;">${r.customer}</td>
+        <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.contract)}</td>
+        <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.payout)}</td>
+        <td style="border:1px solid #000; padding:6px; text-align:right;">${this.fmt(r.profit)}</td>
         <td style="border:1px solid #000; padding:6px; text-align:right;">${r.pct.toFixed(2)}%</td>
-        <td style="border:1px solid #000; padding:6px; text-align:right; font-weight:700;">${fmtMoney(r.thisWeek)}</td>
+        <td style="border:1px solid #000; padding:6px; text-align:right; font-weight:700;">${this.fmt(r.thisWeek)}</td>
         <td style="border:1px solid #000; padding:6px; text-align:center;">${r.bankDropDay || '-'}</td>
       </tr>
     `).join('');
@@ -74,34 +72,29 @@
               <th style="border:1px solid #000; padding:8px;">Profit</th>
               <th style="border:1px solid #000; padding:8px;">%</th>
               <th style="border:1px solid #000; padding:8px;">This Week</th>
-              <th style="border:1px solid #000; padding:8px;">Bank Drop Day</th> <!-- NEW -->
+              <th style="border:1px solid #000; padding:8px;">Bank Drop Day</th>
             </tr>
           </thead>
           <tbody>
             ${rowsHTML}
             <tr style="background:#FFF9C4; font-weight:700;">
               <td colspan="4" style="border:1px solid #000; padding:8px; text-align:right;">TOTALS:</td>
-              <td style="border:1px solid #000; padding:8px; text-align:right;">${fmtMoney(totalPayout)}</td>
-              <td style="border:1px solid #000; padding:8px; text-align:right;">${fmtMoney(totalProfit)}</td>
+              <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalPayout)}</td>
+              <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalProfit)}</td>
               <td style="border:1px solid #000; padding:8px; text-align:right;">${profitPercent.toFixed(2)}%</td>
-              <td style="border:1px solid #000; padding:8px; text-align:right;">${fmtMoney(totalMoney)}</td>
+              <td style="border:1px solid #000; padding:8px; text-align:right;">${this.fmt(totalMoney)}</td>
               <td style="border:1px solid #000; padding:8px;"></td>
             </tr>
           </tbody>
         </table>
 
         <div class="no-print" style="margin-top:20px; text-align:center;">
-          <button onclick="window.print()" style="background:#2196F3; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
-          <button id="closePrintBtn2" style="background:#757575; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
+          <button onclick="window.print()" style="background:#2196F3; color:white; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
+          <button onclick="app.closePrint()" style="background:#757575; color:white; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
         </div>
       </div>`;
-
     document.getElementById('printView').innerHTML = html;
     document.getElementById('mainView').style.display = 'none';
     document.getElementById('printView').style.display = 'block';
-    document.getElementById('closePrintBtn2').onclick = () => {
-      document.getElementById('mainView').style.display = 'block';
-      document.getElementById('printView').style.display = 'none';
-    };
-  }
+  };
 </script>
