@@ -1,0 +1,1532 @@
+import React, { useState } from 'react';
+import { Plus, X, Printer, Save, FolderOpen } from 'lucide-react';
+
+export default function CombinedCalculator() {
+  const [collectionWeek, setCollectionWeek] = useState('');
+  const [calculators, setCalculators] = useState([{
+    id: 1,
+    customerName: '',
+    jobNumber: '',
+    contractAmount: '',
+    cashCheck: '',
+    financeAmount: '',
+    dealerFee: '',
+    creditCard: '',
+    creditCardFee: '',
+    houseFeePercent: '',
+    laborMaterial: '',
+    
+    // Team payouts from ALTA CAL
+    numVets: '',
+    numReps: '',
+    rideAlong: '',
+    rideAlongBonus: '',
+    numRideAlongs: '',
+    
+    // Additional team roles from Project Calculator
+    canvasserPercent: '2',
+    confirmerPercent: '0.25',
+    elisoPercent: '1.5',
+    prodMSPercent: '0.25',
+    prodMSAmount: '',
+    prodRSPercent: '0.25',
+    prodRSAmount: '',
+    prodNCPercent: '0.25',
+    prodNCAmount: '',
+    prodABEPercent: '0.25',
+    prodABEAmount: '',
+    
+    // Finance tracking
+    moneyThisWeek: '',
+    financeSource: '',
+    bankDropDay: ''
+  }]);
+
+  const [showReport, setShowReport] = useState(false);
+  const [savedReports, setSavedReports] = useState([]);
+  const [showSavedReports, setShowSavedReports] = useState(false);
+  const [reportName, setReportName] = useState('');
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [printSingleCalc, setPrintSingleCalc] = useState(null);
+
+  // Load saved reports on mount
+  React.useEffect(() => {
+    loadSavedReports();
+  }, []);
+
+  const loadSavedReports = async () => {
+    try {
+      const result = await window.storage.list('report:');
+      if (result && result.keys) {
+        const reports = [];
+        for (const key of result.keys) {
+          try {
+            const data = await window.storage.get(key);
+            if (data && data.value) {
+              const parsed = JSON.parse(data.value);
+              reports.push({ key, ...parsed });
+            }
+          } catch (e) {
+            console.log('Error loading report:', e);
+          }
+        }
+        setSavedReports(reports);
+      }
+    } catch (error) {
+      console.log('No saved reports yet');
+      setSavedReports([]);
+    }
+  };
+
+  const saveReport = async () => {
+    if (!reportName.trim()) {
+      alert('Please enter a report name');
+      return;
+    }
+    
+    try {
+      const timestamp = new Date().toISOString();
+      const reportData = {
+        name: reportName,
+        date: timestamp,
+        collectionWeek: collectionWeek,
+        calculators: calculators
+      };
+      
+      const key = `report:${Date.now()}`;
+      await window.storage.set(key, JSON.stringify(reportData));
+      
+      setShowSaveDialog(false);
+      setReportName('');
+      await loadSavedReports();
+      alert('Report saved successfully!');
+    } catch (error) {
+      alert('Error saving report: ' + error.message);
+    }
+  };
+
+  const loadReport = (report) => {
+    setCalculators(report.calculators);
+    setCollectionWeek(report.collectionWeek || '');
+    setShowSavedReports(false);
+  };
+
+  const deleteReport = async (key) => {
+    try {
+      const updatedReports = savedReports.filter(report => report.key !== key);
+      setSavedReports(updatedReports);
+      await window.storage.delete(key);
+      setDeleteConfirm(null);
+      alert('Report deleted!');
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Error deleting report: ' + error.message);
+      loadSavedReports();
+      setDeleteConfirm(null);
+    }
+  };
+
+  const formatCurrency = (value) => {
+    if (isNaN(value)) return '$0.00';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(value);
+  };
+
+  const parseValue = (value) => {
+    if (!value || value === '') return 0;
+    const parsed = parseFloat(value.toString().replace(/[,$]/g, ''));
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const parseFee = (amount, fee) => {
+    if (!fee || fee === '') return 0;
+    const amountVal = parseValue(amount);
+    const feeStr = fee.toString().trim();
+    const percent = parseFloat(feeStr.replace('%', '')) || 0;
+    const feeAmount = (amountVal * percent) / 100;
+    return Math.round(feeAmount * 100) / 100;
+  };
+
+  const calculateForOne = (data) => {
+    const contractAmount = parseValue(data.contractAmount);
+    const cashCheck = parseValue(data.cashCheck);
+    const financeAmount = parseValue(data.financeAmount);
+    const laborMaterial = parseValue(data.laborMaterial);
+    
+    // STAGE 1: ALTA CAL CALCULATIONS
+    // Calculate house fee
+    const houseFeePercent = parseValue(data.houseFeePercent);
+    const houseFeeAmount = (contractAmount * houseFeePercent) / 100;
+    
+    // Calculate dealer and credit card fees
+    const dealerFeeAmount = parseFee(data.financeAmount, data.dealerFee);
+    const creditCardFeeAmount = parseFee(data.creditCard, data.creditCardFee);
+    
+    // After house fee
+    const afterHouseFee = contractAmount - houseFeeAmount;
+    
+    // Total after fees (for calculating profit percentage for tiered rates)
+    const totalAfterFees = afterHouseFee - laborMaterial - dealerFeeAmount;
+    const percentOfContract = afterHouseFee > 0 ? (totalAfterFees / afterHouseFee) * 100 : 0;
+
+    // Determine tiered rates based on profit percentage
+    let vetRate = 25;
+    if (percentOfContract >= 50) vetRate = 55;
+    else if (percentOfContract >= 40) vetRate = 45;
+    else if (percentOfContract >= 33) vetRate = 35;
+
+    let repRate = 20;
+    if (percentOfContract >= 50) repRate = 40;
+    else if (percentOfContract >= 40) repRate = 30;
+    else if (percentOfContract >= 33) repRate = 25;
+
+    const vetsCount = parseValue(data.numVets);
+    const repsCount = parseValue(data.numReps);
+    const totalPeople = vetsCount + repsCount;
+
+    // Calculate commission pools
+    const vetCommissionTotal = (totalAfterFees * vetRate) / 100;
+    const repCommissionTotal = (totalAfterFees * repRate) / 100;
+
+    // Per person before deductions
+    const perVetPayout = totalPeople > 0 ? (vetCommissionTotal / totalPeople) : 0;
+    const perRepPayout = totalPeople > 0 ? (repCommissionTotal / totalPeople) : 0;
+
+    // Ride along and credit card fees per person
+    const rideAlongFeeAmount = parseValue(data.rideAlong);
+    const rideAlongFeePerPerson = totalPeople > 0 ? rideAlongFeeAmount / totalPeople : 0;
+    const creditCardFeePerPerson = totalPeople > 0 ? creditCardFeeAmount / totalPeople : 0;
+    
+    // Final per person payouts after deductions
+    const finalPerVetPayout = perVetPayout - rideAlongFeePerPerson - creditCardFeePerPerson;
+    const finalPerRepPayout = perRepPayout - rideAlongFeePerPerson - creditCardFeePerPerson;
+    
+    // Total vet and rep payouts
+    const finalTotalVetsPayout = finalPerVetPayout * vetsCount;
+    const finalTotalRepsPayout = finalPerRepPayout * repsCount;
+
+    // Ride along payout
+    const rideAlongBonusAmount = parseValue(data.rideAlongBonus);
+    const totalRideAlongPayout = rideAlongFeeAmount + rideAlongBonusAmount;
+    const numRideAlongs = parseValue(data.numRideAlongs);
+    const perRideAlongPayout = numRideAlongs > 0 ? (totalRideAlongPayout / numRideAlongs) : 0;
+
+    // ALTA CAL total payout
+    const altaCalTotalPayout = laborMaterial + finalTotalVetsPayout + finalTotalRepsPayout + totalRideAlongPayout;
+    
+    // PRELIMINARY PROFIT after ALTA CAL calculations
+    const preliminaryProfit = afterHouseFee - altaCalTotalPayout - dealerFeeAmount;
+    
+    // STAGE 2: ADDITIONAL TEAM CALCULATIONS (using preliminary profit as base)
+    // Note: Reps payout from ALTA CAL is shown for reference but not added again
+    const repsDirectPayout = finalTotalRepsPayout; // Auto-populated from ALTA CAL (for display only)
+    
+    // Calculate additional team based on preliminary profit or contract
+    const canvasserPayout = preliminaryProfit * (parseValue(data.canvasserPercent) / 100);
+    const confirmerPayout = contractAmount * (parseValue(data.confirmerPercent) / 100);
+    const elisoPayout = contractAmount * (parseValue(data.elisoPercent) / 100);
+    
+    const prodMSPayout = parseValue(data.prodMSAmount) * (parseValue(data.prodMSPercent) / 100);
+    const prodRSPayout = parseValue(data.prodRSAmount) * (parseValue(data.prodRSPercent) / 100);
+    const prodNCPayout = parseValue(data.prodNCAmount) * (parseValue(data.prodNCPercent) / 100);
+    const prodABEPayout = parseValue(data.prodABEAmount) * (parseValue(data.prodABEPercent) / 100);
+    
+    // Additional team total
+    const additionalTeamPayout = canvasserPayout + confirmerPayout + elisoPayout + 
+                                  prodMSPayout + prodRSPayout + prodNCPayout + prodABEPayout;
+    
+    // FINAL CALCULATIONS
+    // Total all payouts (ALTA CAL + Additional Team)
+    const totalTeamPayout = altaCalTotalPayout + additionalTeamPayout;
+    
+    // Final profit after all payouts
+    const finalProfit = preliminaryProfit - additionalTeamPayout;
+    const profitPercent = (afterHouseFee - dealerFeeAmount) > 0 ? (finalProfit / (afterHouseFee - dealerFeeAmount)) * 100 : 0;
+
+    return {
+      contractAmount,
+      houseFeeAmount,
+      dealerFeeAmount,
+      creditCardFeeAmount,
+      afterHouseFee,
+      totalAfterFees,
+      percentOfContract,
+      vetRate,
+      repRate,
+      perVetPayout,
+      perRepPayout,
+      rideAlongFeePerPerson,
+      creditCardFeePerPerson,
+      finalPerVetPayout,
+      finalPerRepPayout,
+      finalTotalVetsPayout,
+      finalTotalRepsPayout,
+      totalRideAlongPayout,
+      perRideAlongPayout,
+      altaCalTotalPayout,
+      preliminaryProfit,
+      repsDirectPayout,
+      canvasserPayout,
+      confirmerPayout,
+      elisoPayout,
+      prodMSPayout,
+      prodRSPayout,
+      prodNCPayout,
+      prodABEPayout,
+      additionalTeamPayout,
+      totalTeamPayout,
+      finalProfit,
+      profitPercent
+    };
+  };
+
+  const calculateTotals = () => {
+    let totalPayout = 0;
+    let totalProfit = 0;
+    let totalAfterHouseFee = 0;
+    let totalMoney = 0;
+    let totalPreliminaryProfit = 0;
+
+    calculators.forEach(data => {
+      const calc = calculateForOne(data);
+      totalPayout += calc.totalTeamPayout;
+      totalProfit += calc.finalProfit;
+      totalAfterHouseFee += (calc.afterHouseFee - calc.dealerFeeAmount);
+      totalMoney += parseValue(data.moneyThisWeek);
+      totalPreliminaryProfit += calc.preliminaryProfit;
+    });
+
+    const overallProfitPercent = totalAfterHouseFee > 0 ? (totalProfit / totalAfterHouseFee) * 100 : 0;
+
+    return {
+      totalPayout,
+      totalProfit,
+      totalAfterHouseFee,
+      totalMoney,
+      overallProfitPercent,
+      totalPreliminaryProfit
+    };
+  };
+
+  const totals = calculateTotals();
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4">
+      <style>
+        {`
+          @media print {
+            @page {
+              margin: 0.25in;
+            }
+            body {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
+            .no-print {
+              display: none !important;
+            }
+            
+            /* Summary report - landscape */
+            .print-report {
+              font-size: 7px !important;
+            }
+            .print-report h1 {
+              font-size: 14px !important;
+            }
+            .print-report table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 6px !important;
+            }
+            .print-report th, .print-report td {
+              padding: 2px !important;
+              font-size: 6px !important;
+            }
+            
+            /* Single calculator - portrait */
+            .print-single-calc {
+              font-size: 9px !important;
+            }
+            .print-single-calc h1 {
+              font-size: 16px !important;
+              margin-bottom: 8px !important;
+            }
+            .print-single-calc h3 {
+              font-size: 12px !important;
+              margin-bottom: 6px !important;
+            }
+            .print-single-calc .text-3xl {
+              font-size: 18px !important;
+            }
+            .print-single-calc .text-2xl {
+              font-size: 14px !important;
+            }
+            .print-single-calc .text-xl {
+              font-size: 12px !important;
+            }
+            .print-single-calc .text-lg {
+              font-size: 10px !important;
+            }
+            .print-single-calc .text-sm {
+              font-size: 8px !important;
+            }
+            .print-single-calc .p-6 {
+              padding: 10px !important;
+            }
+            .print-single-calc .p-4 {
+              padding: 8px !important;
+            }
+            .print-single-calc .p-3 {
+              padding: 6px !important;
+            }
+            .print-single-calc .p-2 {
+              padding: 4px !important;
+            }
+            .print-single-calc .mb-4 {
+              margin-bottom: 8px !important;
+            }
+            .print-single-calc .mb-3 {
+              margin-bottom: 6px !important;
+            }
+            .print-single-calc .gap-4 {
+              gap: 8px !important;
+            }
+            .print-single-calc .gap-3 {
+              gap: 6px !important;
+            }
+          }
+        `}
+      </style>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4">Confirm Delete</h2>
+            <p className="mb-6">Are you sure you want to delete this report?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => deleteReport(deleteConfirm)}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSaveDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4">Save Report</h2>
+            <label className="block text-sm font-bold mb-2">Report Name</label>
+            <input
+              type="text"
+              value={reportName}
+              onChange={(e) => setReportName(e.target.value)}
+              className="w-full border-2 border-gray-300 px-3 py-2 rounded mb-4"
+              placeholder="Enter report name"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={saveReport}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setShowSaveDialog(false);
+                  setReportName('');
+                }}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSavedReports && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-screen overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Saved Reports</h2>
+            {savedReports.length === 0 ? (
+              <p className="text-gray-600 mb-4">No saved reports yet.</p>
+            ) : (
+              <div className="space-y-3 mb-4">
+                {savedReports.map((report) => (
+                  <div key={report.key} className="border-2 border-gray-300 rounded-lg p-4 flex justify-between items-center">
+                    <div>
+                      <div className="font-bold text-lg">{report.name}</div>
+                      <div className="text-sm text-gray-600">
+                        {new Date(report.date).toLocaleString()} • {report.calculators.length} file(s)
+                        {report.collectionWeek && ` • Week: ${report.collectionWeek}`}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => loadReport(report)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                      >
+                        Load
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(report.key)}
+                        className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowSavedReports(false)}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {printSingleCalc !== null && (
+        <div className="print-single-calc bg-white p-6">
+          <h1 className="text-2xl font-bold text-center mb-4 border-b-2 border-blue-500 pb-2">
+            COMBINED PROFIT CALCULATOR - FILE #{printSingleCalc + 1}
+          </h1>
+          
+          {collectionWeek && (
+            <div className="text-center mb-4 text-lg font-bold">
+              Collection Week: {collectionWeek}
+            </div>
+          )}
+          
+          {(() => {
+            const calc = calculators[printSingleCalc];
+            const data = calculateForOne(calc);
+            
+            return (
+              <div>
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-4 mb-4 bg-gray-100 p-4 rounded border-2">
+                  <div>
+                    <span className="font-semibold">Customer Name:</span> <span className="font-bold text-lg">{calc.customerName || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Job Number:</span> <span className="font-bold text-lg">{calc.jobNumber || 'N/A'}</span>
+                  </div>
+                </div>
+
+                {/* Contract & Payment */}
+                <div className="mb-4 bg-blue-50 border-2 border-blue-400 rounded p-4">
+                  <h3 className="font-bold text-lg mb-3 text-center">CONTRACT & PAYMENT</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <strong>Contract Amount:</strong> {formatCurrency(parseValue(calc.contractAmount))}
+                    </div>
+                    <div>
+                      <strong>Cash/Check:</strong> {formatCurrency(parseValue(calc.cashCheck))}
+                    </div>
+                    <div>
+                      <strong>Labor & Material:</strong> {formatCurrency(parseValue(calc.laborMaterial))}
+                    </div>
+                    <div>
+                      <strong>Finance Amount:</strong> {formatCurrency(parseValue(calc.financeAmount))}
+                    </div>
+                    <div>
+                      <strong>Dealer Fee:</strong> {calc.dealerFee || 'N/A'} = {formatCurrency(data.dealerFeeAmount)}
+                    </div>
+                    <div>
+                      <strong>House Fee:</strong> {calc.houseFeePercent}% = {formatCurrency(data.houseFeeAmount)}
+                    </div>
+                    <div>
+                      <strong>Credit Card:</strong> {formatCurrency(parseValue(calc.creditCard))}
+                    </div>
+                    <div>
+                      <strong>CC Fee:</strong> {calc.creditCardFee || 'N/A'}% = {formatCurrency(data.creditCardFeeAmount)}
+                    </div>
+                    <div>
+                      <strong>After House Fee:</strong> {formatCurrency(data.afterHouseFee)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ALTA CAL Team */}
+                <div className="mb-4 bg-green-50 border-2 border-green-400 rounded p-4">
+                  <h3 className="font-bold text-lg mb-3 text-center">ALTA CAL TEAM (TIERED RATES)</h3>
+                  <div className="text-center mb-3 p-2 bg-white rounded border">
+                    <strong>Profit Percentage:</strong> {data.percentOfContract.toFixed(1)}% → 
+                    <strong className="ml-2">Vet Rate: {data.vetRate}%</strong> | 
+                    <strong className="ml-2">Rep Rate: {data.repRate}%</strong>
+                  </div>
+                  
+                  {(parseValue(calc.numVets) > 0 || parseValue(calc.numReps) > 0) && (
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      {parseValue(calc.numVets) > 0 && (
+                        <div className="bg-white rounded p-3 border-2">
+                          <div className="text-center mb-2">
+                            <strong>VETS: {parseValue(calc.numVets)}</strong>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="text-center p-2 bg-green-100 rounded">
+                              <div className="text-sm font-bold">Per Vet</div>
+                              <div className="text-xl font-bold">{formatCurrency(data.finalPerVetPayout)}</div>
+                            </div>
+                            <div className="text-center p-2 bg-green-200 rounded">
+                              <div className="text-sm font-bold">Total</div>
+                              <div className="text-xl font-bold">{formatCurrency(data.finalTotalVetsPayout)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {parseValue(calc.numReps) > 0 && (
+                        <div className="bg-white rounded p-3 border-2">
+                          <div className="text-center mb-2">
+                            <strong>REPS: {parseValue(calc.numReps)}</strong>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="text-center p-2 bg-purple-100 rounded">
+                              <div className="text-sm font-bold">Per Rep</div>
+                              <div className="text-xl font-bold">{formatCurrency(data.finalPerRepPayout)}</div>
+                            </div>
+                            <div className="text-center p-2 bg-purple-200 rounded">
+                              <div className="text-sm font-bold">Total</div>
+                              <div className="text-xl font-bold">{formatCurrency(data.finalTotalRepsPayout)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {parseValue(calc.numRideAlongs) > 0 && (
+                    <div className="bg-white rounded p-3 border-2">
+                      <div className="text-center mb-2">
+                        <strong>RIDE ALONGS: {parseValue(calc.numRideAlongs)}</strong>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center">
+                          <div className="text-sm">Fee</div>
+                          <div className="font-bold">{formatCurrency(parseValue(calc.rideAlong))}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm">Bonus</div>
+                          <div className="font-bold">{formatCurrency(parseValue(calc.rideAlongBonus))}</div>
+                        </div>
+                        <div className="text-center p-2 bg-red-100 rounded">
+                          <div className="text-sm font-bold">Total Payout</div>
+                          <div className="text-xl font-bold">{formatCurrency(data.totalRideAlongPayout)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="mt-3 bg-blue-100 rounded p-3 text-center border-2 border-blue-500">
+                    <div className="text-sm font-bold">ALTA CAL TOTAL PAYOUT</div>
+                    <div className="text-2xl font-bold">{formatCurrency(data.altaCalTotalPayout)}</div>
+                  </div>
+                </div>
+
+                {/* Additional Team */}
+                <div className="mb-4 bg-purple-50 border-2 border-purple-400 rounded p-4">
+                  <h3 className="font-bold text-lg mb-3 text-center">ADDITIONAL TEAM (PERCENTAGE BASED)</h3>
+                  <div className="mb-3 p-2 bg-green-100 rounded text-center border-2 border-green-500">
+                    <div className="text-sm font-bold">ALTA CAL PROFIT (Basis for Percentages)</div>
+                    <div className="text-xl font-bold">{formatCurrency(data.preliminaryProfit)}</div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white p-2 rounded border">
+                      <strong>Reps (from ALTA CAL):</strong> {formatCurrency(data.repsDirectPayout)}
+                    </div>
+                    <div className="bg-white p-2 rounded border">
+                      <strong>Canvasser ({calc.canvasserPercent}%):</strong> {formatCurrency(data.canvasserPayout)}
+                    </div>
+                    <div className="bg-white p-2 rounded border">
+                      <strong>Confirmer ({calc.confirmerPercent}%):</strong> {formatCurrency(data.confirmerPayout)}
+                    </div>
+                    <div className="bg-white p-2 rounded border">
+                      <strong>Eliso ({calc.elisoPercent}%):</strong> {formatCurrency(data.elisoPayout)}
+                    </div>
+                    {parseValue(calc.prodMSAmount) > 0 && (
+                      <div className="bg-white p-2 rounded border">
+                        <strong>Prod MS ({calc.prodMSPercent}% of {formatCurrency(parseValue(calc.prodMSAmount))}):</strong> {formatCurrency(data.prodMSPayout)}
+                      </div>
+                    )}
+                    {parseValue(calc.prodRSAmount) > 0 && (
+                      <div className="bg-white p-2 rounded border">
+                        <strong>Prod RS ({calc.prodRSPercent}% of {formatCurrency(parseValue(calc.prodRSAmount))}):</strong> {formatCurrency(data.prodRSPayout)}
+                      </div>
+                    )}
+                    {parseValue(calc.prodNCAmount) > 0 && (
+                      <div className="bg-white p-2 rounded border">
+                        <strong>Prod NC ({calc.prodNCPercent}% of {formatCurrency(parseValue(calc.prodNCAmount))}):</strong> {formatCurrency(data.prodNCPayout)}
+                      </div>
+                    )}
+                    {parseValue(calc.prodABEAmount) > 0 && (
+                      <div className="bg-white p-2 rounded border">
+                        <strong>Prod ABE ({calc.prodABEPercent}% of {formatCurrency(parseValue(calc.prodABEAmount))}):</strong> {formatCurrency(data.prodABEPayout)}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-3 bg-purple-100 rounded p-3 text-center border-2 border-purple-500">
+                    <div className="text-sm font-bold">ADDITIONAL TEAM TOTAL PAYOUT</div>
+                    <div className="text-2xl font-bold">{formatCurrency(data.additionalTeamPayout)}</div>
+                  </div>
+                </div>
+
+                {/* Finance Info */}
+                <div className="mb-4 bg-yellow-50 border-2 border-yellow-400 rounded p-4">
+                  <h3 className="font-bold text-lg mb-3 text-center">FINANCE & BANK INFO</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <strong>Money This Week:</strong> {formatCurrency(parseValue(calc.moneyThisWeek))}
+                    </div>
+                    <div>
+                      <strong>Finance Source:</strong> {calc.financeSource || 'N/A'}
+                    </div>
+                    <div>
+                      <strong>Bank Drop Day:</strong> {calc.bankDropDay || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Final Summary */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded p-6 text-center text-white">
+                    <div className="text-sm font-bold mb-2">ALTA CAL PAYOUT TOTAL</div>
+                    <div className="text-3xl font-bold">{formatCurrency(data.altaCalTotalPayout)}</div>
+                  </div>
+                  <div className="bg-gradient-to-r from-green-400 to-green-600 rounded p-6 text-center text-white">
+                    <div className="text-sm font-bold mb-2">ALTA CAL PROFIT</div>
+                    <div className="text-3xl font-bold">{formatCurrency(data.preliminaryProfit)}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="no-print mt-6 text-center flex gap-4 justify-center">
+            <button
+              onClick={() => window.print()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg flex items-center gap-2"
+            >
+              <Printer size={20} />
+              PRINT NOW
+            </button>
+            <button
+              onClick={() => setPrintSingleCalc(null)}
+              className="bg-gray-600 text-white font-bold py-3 px-8 rounded-lg"
+            >
+              CLOSE
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showReport && (
+        <div className="print-report bg-white p-4">
+          <h1 className="text-xl font-bold text-center mb-2">COMBINED PROFIT SHARE REPORT</h1>
+          {collectionWeek && (
+            <h2 className="text-center text-sm mb-4">Collection Week: {collectionWeek}</h2>
+          )}
+          
+          <div className="grid grid-cols-4 gap-2 mb-4">
+            <div className="bg-blue-500 text-white p-3 rounded text-center">
+              <div className="text-xs font-bold">TOTAL PAYOUT</div>
+              <div className="text-lg font-bold">{formatCurrency(totals.totalPayout)}</div>
+            </div>
+            <div className="bg-purple-500 text-white p-3 rounded text-center">
+              <div className="text-xs font-bold">TOTAL PROFIT</div>
+              <div className="text-lg font-bold">{formatCurrency(totals.totalProfit)}</div>
+            </div>
+            <div className="bg-green-500 text-white p-3 rounded text-center">
+              <div className="text-xs font-bold">PROFIT %</div>
+              <div className="text-lg font-bold">{totals.overallProfitPercent.toFixed(2)}%</div>
+            </div>
+            <div className="bg-orange-500 text-white p-3 rounded text-center">
+              <div className="text-xs font-bold">MONEY THIS WEEK</div>
+              <div className="text-lg font-bold">{formatCurrency(totals.totalMoney)}</div>
+            </div>
+          </div>
+
+          <table className="w-full border-2 border-black text-xs">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="border border-black p-1">#</th>
+                <th className="border border-black p-1">Job #</th>
+                <th className="border border-black p-1">Customer</th>
+                <th className="border border-black p-1">Contract</th>
+                <th className="border border-black p-1">Total Payout</th>
+                <th className="border border-black p-1">Final Profit</th>
+                <th className="border border-black p-1">%</th>
+                <th className="border border-black p-1">This Week</th>
+                <th className="border border-black p-1">Bank Day</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calculators.map((data, index) => {
+                const calc = calculateForOne(data);
+                return (
+                  <tr key={index}>
+                    <td className="border border-black p-1 text-center">{index + 1}</td>
+                    <td className="border border-black p-1">{data.jobNumber || '-'}</td>
+                    <td className="border border-black p-1">{data.customerName || '-'}</td>
+                    <td className="border border-black p-1 text-right">{formatCurrency(calc.contractAmount)}</td>
+                    <td className="border border-black p-1 text-right bg-blue-50">{formatCurrency(calc.totalTeamPayout)}</td>
+                    <td className="border border-black p-1 text-right bg-purple-50">{formatCurrency(calc.finalProfit)}</td>
+                    <td className="border border-black p-1 text-right">{calc.profitPercent.toFixed(2)}%</td>
+                    <td className="border border-black p-1 text-right bg-green-50 font-bold">{formatCurrency(parseValue(data.moneyThisWeek))}</td>
+                    <td className="border border-black p-1 text-center">{data.bankDropDay || '-'}</td>
+                  </tr>
+                );
+              })}
+              <tr className="bg-yellow-100 font-bold">
+                <td colSpan="4" className="border border-black p-1 text-right">TOTALS:</td>
+                <td className="border border-black p-1 text-right bg-blue-100">{formatCurrency(totals.totalPayout)}</td>
+                <td className="border border-black p-1 text-right bg-purple-100">{formatCurrency(totals.totalProfit)}</td>
+                <td className="border border-black p-1 text-right">{totals.overallProfitPercent.toFixed(2)}%</td>
+                <td className="border border-black p-1 text-right bg-green-100">{formatCurrency(totals.totalMoney)}</td>
+                <td className="border border-black p-1"></td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div className="no-print mt-4 text-center flex gap-4 justify-center">
+            <button
+              onClick={() => window.print()}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg flex items-center gap-2"
+            >
+              <Printer size={20} />
+              PRINT NOW
+            </button>
+            <button
+              onClick={() => setShowReport(false)}
+              className="bg-gray-600 text-white font-bold py-3 px-8 rounded-lg"
+            >
+              CLOSE REPORT
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!showReport && printSingleCalc === null && (
+        <div className="max-w-full mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-4 border-blue-500">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+              <h1 className="text-3xl font-bold text-blue-800">COMBINED PROFIT CALCULATOR</h1>
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  onClick={() => setShowSavedReports(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"
+                >
+                  <FolderOpen size={20} />
+                  SAVED
+                </button>
+                <button
+                  onClick={() => setShowSaveDialog(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"
+                >
+                  <Save size={20} />
+                  SAVE
+                </button>
+                <button
+                  onClick={() => setShowReport(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"
+                >
+                  <Printer size={20} />
+                  PRINT
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-bold mb-2 text-blue-800">COLLECTION WEEK PERIOD</label>
+              <input
+                type="text"
+                value={collectionWeek}
+                onChange={(e) => setCollectionWeek(e.target.value)}
+                className="w-full max-w-md border-3 border-blue-500 px-4 py-3 rounded-lg text-center text-xl font-bold"
+                placeholder="Enter dates (e.g., 10/1-10/6)"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-4 rounded-lg shadow-lg text-white">
+                <div className="text-xs font-bold mb-1">TOTAL PAYOUT</div>
+                <div className="text-2xl font-bold">{formatCurrency(totals.totalPayout)}</div>
+              </div>
+              <div className="bg-gradient-to-br from-purple-400 to-purple-600 p-4 rounded-lg shadow-lg text-white">
+                <div className="text-xs font-bold mb-1">TOTAL PROFIT</div>
+                <div className="text-2xl font-bold">{formatCurrency(totals.totalProfit)}</div>
+              </div>
+              <div className="bg-gradient-to-br from-green-400 to-green-600 p-4 rounded-lg shadow-lg text-white">
+                <div className="text-xs font-bold mb-1">PROFIT %</div>
+                <div className="text-2xl font-bold">{totals.overallProfitPercent.toFixed(2)}%</div>
+              </div>
+              <div className="bg-gradient-to-br from-red-400 to-red-600 p-4 rounded-lg shadow-lg text-white">
+                <div className="text-xs font-bold mb-1">MONEY THIS WEEK</div>
+                <div className="text-2xl font-bold">{formatCurrency(totals.totalMoney)}</div>
+              </div>
+            </div>
+          </div>
+
+          {calculators.map((calc, index) => {
+            const data = calculateForOne(calc);
+            return (
+              <div key={calc.id} className="relative mb-6 bg-white border-4 border-gray-300 rounded-lg">
+                {calculators.length > 1 && (
+                  <button
+                    onClick={() => setCalculators(calculators.filter(c => c.id !== calc.id))}
+                    className="absolute -top-3 -right-3 bg-red-600 text-white rounded-full p-2 hover:bg-red-700 z-10 shadow-lg"
+                  >
+                    <X size={20} />
+                  </button>
+                )}
+                
+                <div className="bg-blue-300 text-center py-2 border-b-2 border-black flex justify-between items-center px-4">
+                  <div className="w-20"></div>
+                  <h2 className="text-lg font-bold">FILE #{index + 1}</h2>
+                  <button
+                    onClick={() => setPrintSingleCalc(index)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2"
+                  >
+                    <Printer size={18} />
+                    PRINT
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Basic Info */}
+                  <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
+                    <h3 className="text-lg font-bold mb-3">FILE INFORMATION</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-bold mb-1 block">JOB NUMBER</label>
+                        <input
+                          type="text"
+                          value={calc.jobNumber}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].jobNumber = e.target.value;
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full border-2 border-gray-300 px-3 py-2 rounded"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-bold mb-1 block">CUSTOMER NAME</label>
+                        <input
+                          type="text"
+                          value={calc.customerName}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].customerName = e.target.value;
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full border-2 border-gray-300 px-3 py-2 rounded"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contract Info */}
+                  <div className="bg-blue-50 border-4 border-blue-400 rounded-lg p-4">
+                    <h3 className="text-lg font-bold text-blue-900 mb-3 text-center">CONTRACT & PAYMENT</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold mb-2">CONTRACT AMOUNT</label>
+                        <div className="flex items-center bg-white border-2 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={calc.contractAmount}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].contractAmount = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">CASH/CHECK</label>
+                        <div className="flex items-center bg-white border-2 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={calc.cashCheck}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].cashCheck = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">LABOR & MATERIAL</label>
+                        <div className="flex items-center bg-white border-2 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={calc.laborMaterial}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].laborMaterial = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-bold mb-2">FINANCE AMOUNT</label>
+                        <div className="flex items-center bg-white border-2 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={calc.financeAmount}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].financeAmount = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none"
+                          />
+                        </div>
+                        <label className="block text-sm font-bold mb-2 mt-2">DEALER FEE</label>
+                        <input
+                          type="text"
+                          value={calc.dealerFee}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].dealerFee = e.target.value;
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full text-right bg-white border-2 rounded px-3 py-2"
+                          placeholder="3.5% or 150"
+                        />
+                        {calc.dealerFee && parseValue(calc.financeAmount) > 0 && (
+                          <div className="text-center text-sm font-bold text-blue-700 mt-1">
+                            = {formatCurrency(data.dealerFeeAmount)}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">CREDIT CARD</label>
+                        <div className="flex items-center bg-white border-2 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={calc.creditCard}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].creditCard = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none"
+                          />
+                        </div>
+                        <label className="block text-sm font-bold mb-2 mt-2">CC FEE %</label>
+                        <input
+                          type="text"
+                          value={calc.creditCardFee}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].creditCardFee = e.target.value;
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full text-right bg-white border-2 rounded px-3 py-2"
+                          placeholder="3.5"
+                        />
+                        {calc.creditCardFee && parseValue(calc.creditCard) > 0 && (
+                          <div className="text-center text-sm font-bold text-blue-700 mt-1">
+                            = {formatCurrency(data.creditCardFeeAmount)}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">HOUSE FEE %</label>
+                        <div className="flex items-center bg-white border-2 rounded px-3 py-2">
+                          <input
+                            type="text"
+                            value={calc.houseFeePercent}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].houseFeePercent = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none"
+                          />
+                          <span className="ml-2">%</span>
+                        </div>
+                        {data.houseFeeAmount > 0 && (
+                          <div className="text-center text-lg font-bold mt-2">{formatCurrency(data.houseFeeAmount)}</div>
+                        )}
+                        <div className="mt-4 p-2 bg-blue-100 rounded text-center">
+                          <div className="text-xs font-bold">After House Fee</div>
+                          <div className="text-lg font-bold">{formatCurrency(data.afterHouseFee)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Team Payouts - ALTA CAL Style */}
+                  <div className="bg-green-50 border-4 border-green-400 rounded-lg p-4">
+                    <h3 className="text-lg font-bold text-green-900 mb-3 text-center">ALTA CAL TEAM (TIERED RATES)</h3>
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-bold mb-2">VETS ON CONTRACT</label>
+                        <input
+                          type="text"
+                          value={calc.numVets}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].numVets = e.target.value.replace(/[^0-9]/g, '');
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full text-center border-2 rounded px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">REPS ON CONTRACT</label>
+                        <input
+                          type="text"
+                          value={calc.numReps}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].numReps = e.target.value.replace(/[^0-9]/g, '');
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full text-center border-2 rounded px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">RIDE ALONGS</label>
+                        <input
+                          type="text"
+                          value={calc.numRideAlongs}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].numRideAlongs = e.target.value.replace(/[^0-9]/g, '');
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full text-center border-2 rounded px-3 py-2"
+                        />
+                      </div>
+                    </div>
+                    {(parseValue(calc.numVets) > 0 || parseValue(calc.numReps) > 0) && (
+                      <div className="bg-white p-3 rounded border-2">
+                        <div className="text-sm font-bold mb-2 text-center">
+                          Profit Rate: Vets {data.vetRate}% | Reps {data.repRate}% (Based on {data.percentOfContract.toFixed(1)}% profit)
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          {parseValue(calc.numVets) > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-center p-2 bg-green-50 rounded border">
+                                <div className="text-xs font-bold">Per Vet</div>
+                                <div className="text-lg font-bold text-green-700">{formatCurrency(data.finalPerVetPayout)}</div>
+                              </div>
+                              <div className="text-center p-2 bg-green-100 rounded border-2 border-green-500">
+                                <div className="text-xs font-bold">Total Vet Payout</div>
+                                <div className="text-xl font-bold text-green-800">{formatCurrency(data.finalTotalVetsPayout)}</div>
+                              </div>
+                            </div>
+                          )}
+                          {parseValue(calc.numReps) > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-center p-2 bg-purple-50 rounded border">
+                                <div className="text-xs font-bold">Per Rep</div>
+                                <div className="text-lg font-bold text-purple-700">{formatCurrency(data.finalPerRepPayout)}</div>
+                              </div>
+                              <div className="text-center p-2 bg-purple-100 rounded border-2 border-purple-500">
+                                <div className="text-xs font-bold">Total Rep Payout</div>
+                                <div className="text-xl font-bold text-purple-800">{formatCurrency(data.finalTotalRepsPayout)}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4 mt-3">
+                      <div>
+                        <label className="block text-sm font-bold mb-2 text-red-700">RIDE ALONG FEE</label>
+                        <div className="flex items-center bg-red-100 border-2 border-red-400 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={calc.rideAlong}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].rideAlong = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none bg-transparent"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2 text-red-700">RIDE ALONG BONUS</label>
+                        <div className="flex items-center bg-red-100 border-2 border-red-400 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={calc.rideAlongBonus}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].rideAlongBonus = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none bg-transparent"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {parseValue(calc.numRideAlongs) > 0 && (
+                      <div className="mt-3 bg-red-100 p-3 rounded text-center">
+                        <div className="text-sm font-bold">Total Ride Along Payout</div>
+                        <div className="text-xl font-bold">{formatCurrency(data.totalRideAlongPayout)}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Additional Team - Project Calculator Style */}
+                  <div className="bg-purple-50 border-4 border-purple-400 rounded-lg p-4">
+                    <h3 className="text-lg font-bold text-purple-900 mb-3 text-center">ADDITIONAL TEAM (PERCENTAGE BASED)</h3>
+                    <div className="mb-4 p-3 bg-purple-100 border-2 border-purple-500 rounded">
+                      <div className="text-sm font-bold text-center mb-2">PRELIMINARY PROFIT (After ALTA CAL)</div>
+                      <div className="text-2xl font-bold text-center text-purple-900">{formatCurrency(data.preliminaryProfit)}</div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="block text-sm font-bold mb-2 text-green-700">REPS PAYOUT (Auto from ALTA CAL)</label>
+                        <div className="flex items-center bg-green-100 border-2 border-green-500 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={formatCurrency(data.repsDirectPayout).replace('$', '')}
+                            readOnly
+                            className="w-full text-right focus:outline-none bg-transparent font-bold text-green-800"
+                          />
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1 text-center">
+                          This value is automatically calculated from ALTA CAL Rep payouts above
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-bold mb-2">CANVASSER % (of Prelim Profit)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={calc.canvasserPercent}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].canvasserPercent = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-20 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>% = {formatCurrency(data.canvasserPayout)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">CONFIRMER % (of Contract)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={calc.confirmerPercent}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].confirmerPercent = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-20 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>% = {formatCurrency(data.confirmerPayout)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">ELISO % (of Contract)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={calc.elisoPercent}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].elisoPercent = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-20 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>% = {formatCurrency(data.elisoPayout)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-bold mb-2">PROD MS</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={calc.prodMSPercent}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].prodMSPercent = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-16 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>% of</span>
+                          <input
+                            type="text"
+                            value={calc.prodMSAmount}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].prodMSAmount = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-24 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>= {formatCurrency(data.prodMSPayout)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">PROD RS</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={calc.prodRSPercent}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].prodRSPercent = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-16 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>% of</span>
+                          <input
+                            type="text"
+                            value={calc.prodRSAmount}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].prodRSAmount = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-24 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>= {formatCurrency(data.prodRSPayout)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">PROD NC</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={calc.prodNCPercent}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].prodNCPercent = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-16 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>% of</span>
+                          <input
+                            type="text"
+                            value={calc.prodNCAmount}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].prodNCAmount = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-24 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>= {formatCurrency(data.prodNCPayout)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">PROD ABE</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={calc.prodABEPercent}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].prodABEPercent = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-16 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>% of</span>
+                          <input
+                            type="text"
+                            value={calc.prodABEAmount}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].prodABEAmount = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-24 text-right border-2 rounded px-2 py-2"
+                          />
+                          <span>= {formatCurrency(data.prodABEPayout)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-white border-2 rounded">
+                      <div className="text-sm font-bold text-center">TOTAL ADDITIONAL TEAM PAYOUT</div>
+                      <div className="text-xl font-bold text-center text-purple-900">{formatCurrency(data.additionalTeamPayout)}</div>
+                    </div>
+                  </div>
+
+                  {/* Finance & Bank Info */}
+                  <div className="bg-yellow-50 border-4 border-yellow-400 rounded-lg p-4">
+                    <h3 className="text-lg font-bold text-yellow-900 mb-3 text-center">FINANCE & BANK INFO</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold mb-2">MONEY THIS WEEK</label>
+                        <div className="flex items-center bg-white border-2 rounded px-3 py-2">
+                          <span className="mr-2">$</span>
+                          <input
+                            type="text"
+                            value={calc.moneyThisWeek}
+                            onChange={(e) => {
+                              const newCalcs = [...calculators];
+                              newCalcs[index].moneyThisWeek = e.target.value.replace(/[^0-9.]/g, '');
+                              setCalculators(newCalcs);
+                            }}
+                            className="w-full text-right focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">FINANCE SOURCE</label>
+                        <select
+                          value={calc.financeSource}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].financeSource = e.target.value;
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full border-2 rounded px-3 py-2"
+                        >
+                          <option value="">Select</option>
+                          <option value="Finance">Finance</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Both">Both</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">BANK DROP DAY</label>
+                        <select
+                          value={calc.bankDropDay}
+                          onChange={(e) => {
+                            const newCalcs = [...calculators];
+                            newCalcs[index].bankDropDay = e.target.value;
+                            setCalculators(newCalcs);
+                          }}
+                          className="w-full border-2 rounded px-3 py-2"
+                        >
+                          <option value="">Select Day</option>
+                          <option value="Monday">Monday</option>
+                          <option value="Tuesday">Tuesday</option>
+                          <option value="Wednesday">Wednesday</option>
+                          <option value="Thursday">Thursday</option>
+                          <option value="Friday">Friday</option>
+                          <option value="Saturday">Saturday</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg p-6 text-center text-white">
+                        <div className="text-sm font-bold mb-2">ALTA CAL PAYOUT TOTAL</div>
+                        <div className="text-3xl font-bold">{formatCurrency(data.altaCalTotalPayout)}</div>
+                      </div>
+                      <div className="bg-gradient-to-r from-green-400 to-green-600 rounded-lg p-6 text-center text-white">
+                        <div className="text-sm font-bold mb-2">ALTA CAL PROFIT</div>
+                        <div className="text-3xl font-bold">{formatCurrency(data.preliminaryProfit)}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="text-center mt-6">
+            <button
+              onClick={() => {
+                const newId = Math.max(...calculators.map(c => c.id)) + 1;
+                setCalculators([...calculators, {
+                  id: newId,
+                  customerName: '',
+                  jobNumber: '',
+                  contractAmount: '',
+                  cashCheck: '',
+                  financeAmount: '',
+                  dealerFee: '',
+                  creditCard: '',
+                  creditCardFee: '',
+                  houseFeePercent: '',
+                  laborMaterial: '',
+                  numVets: '',
+                  numReps: '',
+                  rideAlong: '',
+                  rideAlongBonus: '',
+                  numRideAlongs: '',
+                  canvasserPercent: '2',
+                  confirmerPercent: '0.25',
+                  elisoPercent: '1.5',
+                  prodMSPercent: '0.25',
+                  prodMSAmount: '',
+                  prodRSPercent: '0.25',
+                  prodRSAmount: '',
+                  prodNCPercent: '0.25',
+                  prodNCAmount: '',
+                  prodABEPercent: '0.25',
+                  prodABEAmount: '',
+                  moneyThisWeek: '',
+                  financeSource: '',
+                  bankDropDay: ''
+                }]);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-full shadow-lg flex items-center gap-3 mx-auto text-xl"
+            >
+              <Plus size={28} />
+              ADD NEW FILE
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
