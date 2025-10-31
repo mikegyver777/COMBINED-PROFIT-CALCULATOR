@@ -6,74 +6,78 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>Combined Profit Calculator</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif; background:#f5f5f5; padding:15px; }
-    input,select,button { font-size:16px !important; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f5f5f5; padding: 15px; }
+    input, select, button { font-size: 16px !important; } /* mobile: prevent zoom */
 
-    .container { max-width:1400px; margin:0 auto; }
-    .btn{ padding:14px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer; touch-action:manipulation;}
-    .btn-primary{background:#4CAF50;color:#fff}
-    .btn-blue{background:#2196F3;color:#fff}
-    .btn-red{background:#EF5350;color:#fff}
-    .btn-gray{background:#757575;color:#fff}
+    .container { max-width: 1400px; margin: 0 auto; }
+    .btn { padding: 14px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+    .btn-primary { background: #4CAF50; color: white; }
+    .btn-blue { background: #2196F3; color: white; }
+    .btn-red { background: #EF5350; color: white; }
+    .btn-gray { background: #757575; color: white; }
 
-    .header{background:#fff; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,.1)}
-    .header h1{color:#1976D2; font-size:24px; margin-bottom:15px}
-    .header-buttons{display:flex; gap:10px; flex-wrap:wrap}
+    .header { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .header h1 { color: #1976D2; font-size: 24px; margin-bottom: 15px; }
+    .header-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
 
-    .week-input{background:#fff; padding:15px; border-radius:12px; margin-bottom:20px; text-align:center}
-    .week-input input{font-size:16px; padding:12px; border:2px solid #2196F3; border-radius:6px; width:100%; max-width:400px}
+    .week-input { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; }
+    .week-input input { font-size: 16px; padding: 12px; border: 2px solid #2196F3; border-radius: 6px; width: 100%; max-width: 400px; }
 
-    .summary-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:20px}
-    .summary-card{background:linear-gradient(135deg,var(--c1),var(--c2)); padding:15px; border-radius:8px; color:#fff; text-align:center}
-    .summary-card.blue{--c1:#42A5F5; --c2:#2196F3}
-    .summary-card.purple{--c1:#AB47BC; --c2:#9C27B0}
-    .summary-card.green{--c1:#4CAF50; --c2:#45a049}
-    .summary-card.red{--c1:#EF5350; --c2:#E53935}
-    .summary-card .label{font-size:11px; font-weight:600; margin-bottom:5px}
-    .summary-card .value{font-size:20px; font-weight:700}
+    .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+    .summary-card { background: linear-gradient(135deg, var(--c1), var(--c2)); padding: 15px; border-radius: 8px; color: white; text-align: center; }
+    .summary-card.blue { --c1: #42A5F5; --c2: #2196F3; }
+    .summary-card.purple { --c1: #AB47BC; --c2: #9C27B0; }
+    .summary-card.green { --c1: #4CAF50; --c2: #45a049; }
+    .summary-card.red { --c1: #EF5350; --c2: #E53935; }
+    .summary-card .label { font-size: 11px; font-weight: 600; margin-bottom: 5px; }
+    .summary-card .value { font-size: 20px; font-weight: 700; }
 
-    .calculator{background:#fff; border:3px solid #ccc; border-radius:12px; margin-bottom:20px; position:relative}
-    .calc-header{background:#BBDEFB; padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000}
-    .delete-btn{position:absolute; top:-10px; right:-10px; background:#EF5350; color:#fff; border:none; border-radius:50%; width:32px; height:32px; font-size:20px; cursor:pointer; z-index:10}
+    .calculator { background: white; border: 3px solid #ccc; border-radius: 12px; margin-bottom: 20px; position: relative; }
+    .calc-header { background: #BBDEFB; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; }
+    .delete-btn { position: absolute; top: -10px; right: -10px; background: #EF5350; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 20px; cursor: pointer; z-index: 10; }
 
-    .calc-section{padding:20px}
-    .section{margin-bottom:20px; border:3px solid #e0e0e0; border-radius:8px}
-    .section-header{padding:12px; font-weight:600; text-align:center}
-    .section-header.blue{background:#BBDEFB; color:#1565C0}
-    .section-header.green{background:#C8E6C9; color:#2E7D32}
-    .section-header.purple{background:#E1BEE7; color:#6A1B9A}
-    .section-header.yellow{background:#FFF9C4; color:#F57F17}
-    .section-content{padding:15px; background:#fafafa}
+    .calc-section { padding: 20px; }
+    .section { margin-bottom: 20px; border: 3px solid #e0e0e0; border-radius: 8px; }
+    .section-header { padding: 12px; font-weight: 600; text-align: center; }
+    .section-header.blue { background: #BBDEFB; color: #1565C0; }
+    .section-header.green { background: #C8E6C9; color: #2E7D32; }
+    .section-header.purple { background: #E1BEE7; color: #6A1B9A; }
+    .section-header.yellow { background: #FFF9C4; color: #F57F17; }
+    .section-content { padding: 15px; background: #fafafa; }
 
-    .form-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:15px}
-    .form-group{display:flex; flex-direction:column}
-    .form-group label{font-size:12px; font-weight:600; margin-bottom:6px; color:#555}
-    .form-group input,.form-group select{padding:12px; border:2px solid #e0e0e0; border-radius:6px; font-size:16px}
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group label { font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #555; }
+    .form-group input, .form-group select { padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 16px; }
 
-    .input-with-symbol{display:flex; align-items:center; background:#fff; border:2px solid #e0e0e0; border-radius:6px; padding:0 12px}
-    .input-with-symbol input{border:none; flex:1; padding:12px 0; text-align:right; font-size:16px}
+    .input-with-symbol { display: flex; align-items: center; background: white; border: 2px solid #e0e0e0; border-radius: 6px; padding: 0 12px; }
+    .input-with-symbol input { border: none; flex: 1; padding: 12px 0; text-align: right; font-size: 16px; }
 
-    .big-card{background:linear-gradient(135deg,var(--c1),var(--c2)); color:#fff; padding:20px; text-align:center; border-radius:8px}
-    .big-card .label{font-size:12px; font-weight:600; margin-bottom:8px}
-    .big-card .value{font-size:28px; font-weight:700}
+    /* Bigger % inputs per your request */
+    .input-pct { width: 100px !important; padding: 12px; text-align: right; }
+    .input-pct-small { width: 80px !important; padding: 12px; text-align: right; }
 
-    .add-btn{background:#2196F3; color:#fff; font-weight:700; padding:18px 35px; border-radius:50px; border:none; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:12px; margin:20px auto}
+    .big-card { background: linear-gradient(135deg, var(--c1), var(--c2)); color: white; padding: 20px; text-align: center; border-radius: 8px; }
+    .big-card .label { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+    .big-card .value { font-size: 28px; font-weight: 700; }
 
-    .tier-results{background:#fff; padding:12px; border-radius:6px; border:2px solid #e0e0e0; margin-top:10px}
-    .tier-info{text-align:center; font-size:11px; font-weight:600; padding:8px; background:#f5f5f5; border-radius:4px; margin-bottom:10px}
-    .tier-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px}
-    .tier-person{border:2px solid #e0e0e0; border-radius:6px; padding:12px}
-    .tier-box{text-align:center; padding:8px; border-radius:4px; margin-bottom:6px}
-    .tier-box.light{background:#f5f5f5; border:1px solid #ddd}
-    .tier-box.bold{background:#e8f5e9; border:2px solid #4CAF50}
-    .tier-box.purple-light{background:#f3e5f5; border:1px solid #ddd}
-    .tier-box.purple-bold{background:#f3e5f5; border:2px solid #9C27B0}
-    .tier-box .tier-label{font-size:10px; font-weight:600}
-    .tier-box .tier-value{font-size:16px; font-weight:700}
+    .add-btn { background: #2196F3; color: white; font-weight: 700; padding: 18px 35px; border-radius: 50px; border: none; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; margin: 20px auto; }
 
-    @media print{.no-print{display:none!important}.print-view{display:block!important}}
-    .print-view{display:none}
+    .tier-results { background: white; padding: 12px; border-radius: 6px; border: 2px solid #e0e0e0; margin-top: 10px; }
+    .tier-info { text-align: center; font-size: 11px; font-weight: 600; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 10px; }
+    .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .tier-person { border: 2px solid #e0e0e0; border-radius: 6px; padding: 12px; }
+    .tier-box { text-align: center; padding: 8px; border-radius: 4px; margin-bottom: 6px; }
+    .tier-box.light { background: #f5f5f5; border: 1px solid #ddd; }
+    .tier-box.bold { background: #e8f5e9; border: 2px solid #4CAF50; }
+    .tier-box.purple-light { background: #f3e5f5; border: 1px solid #ddd; }
+    .tier-box.purple-bold { background: #f3e5f5; border: 2px solid #9C27B0; }
+    .tier-box .tier-label { font-size: 10px; font-weight: 600; }
+    .tier-box .tier-value { font-size: 16px; font-weight: 700; }
+
+    @media print { .no-print { display: none !important; } .print-view { display: block !important; } }
+    .print-view { display: none; }
   </style>
 </head>
 <body>
@@ -88,16 +92,16 @@
       </div>
 
       <div class="week-input">
-        <label style="display:block;font-weight:700;margin-bottom:10px;">COLLECTION WEEK PERIOD</label>
-        <input id="collectionWeek" type="text" inputmode="text" placeholder="10/1-10/6" />
+        <label style="display: block; font-weight: 700; margin-bottom: 10px;">COLLECTION WEEK PERIOD</label>
+        <input type="text" inputmode="text" id="collectionWeek" placeholder="10/1-10/6" />
       </div>
 
       <div id="summaryCards" class="summary-cards"></div>
       <div id="calculators"></div>
 
-      <div style="text-align:center;">
+      <div style="text-align: center;">
         <button class="add-btn" onclick="app.addCalculator()">
-          <span style="font-size:24px;">+</span> ADD NEW FILE
+          <span style="font-size: 24px;">+</span> ADD NEW FILE
         </button>
       </div>
     </div>
@@ -106,568 +110,634 @@
   </div>
 
   <script>
-    // ---------- helpers ----------
-    const fmt = v => {
-      const n = Number.isFinite(v) ? v : parseFloat(String(v||0).replace(/[^\d.-]/g,''))||0;
-      return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-    };
-    const num = v => {
-      if (v===undefined||v===null) return 0;
-      const n = parseFloat(String(v).replace(/[^\d.-]/g,'')); return Number.isFinite(n)?n:0;
-    };
-    const fee = (base, input) => {
-      const B = num(base);
-      if (input===undefined||input===null||String(input).trim()==='') return 0;
-      const raw = String(input).trim();
-      const hasPct = raw.includes('%');
-      const hasDol = raw.includes('$');
-      const n = num(raw);
-      if (hasDol) return n;
-      if (hasPct) return B*(n/100);
-      if (n>100) return n;
-      if (n>1) return B*(n/100);
-      if (n>0) return B*n;
-      return 0;
-    };
-    const dayIndex = d => ({Monday:0,Tuesday:1,Wednesday:2,Thursday:3,Friday:4,Saturday:5})[d] ?? 99;
+    // Order for grouped printout
+    const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-    // ---------- app ----------
     const app = {
       calculators: [],
       nextId: 1,
 
-      calc(c){
-        const contractAmount   = num(c.contractAmount);
-        const laborMaterial    = num(c.laborMaterial);
-        const houseFeePercent  = num(c.houseFeePercent);
-        const houseFeeAmount   = (contractAmount*houseFeePercent)/100;
+      init() {
+        this.addCalculator();
+        document.getElementById('collectionWeek').addEventListener('input', () => this.updateSummary());
+      },
 
-        const dealerFeeAmount     = fee(c.financeAmount, c.dealerFee);
-        const creditCardFeeAmount = fee(c.creditCard,    c.creditCardFee);
+      fmt(value) {
+        const n = Number.isFinite(value) ? value : parseFloat(value || 0);
+        return '$' + (n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      },
 
-        const afterHouseFee   = contractAmount - houseFeeAmount;
-        const totalAfterFees  = afterHouseFee - laborMaterial - dealerFeeAmount;
-        const percentOfContract = afterHouseFee>0 ? (totalAfterFees/afterHouseFee)*100 : 0;
+      parseValue(value) {
+        if (value === undefined || value === null) return 0;
+        const parsed = parseFloat(String(value).replace(/[,\$%]/g, '').trim());
+        return Number.isFinite(parsed) ? parsed : 0;
+      },
 
-        let vetRate=25, repRate=20;
-        if (percentOfContract>=50){ vetRate=55; repRate=40; }
-        else if (percentOfContract>=40){ vetRate=45; repRate=30; }
-        else if (percentOfContract>=33){ vetRate=35; repRate=25; }
+      // feeInput can be % like "3.5" or "3.5%" or fraction "0.035", or dollars "$150"/"150"
+      parseFeeAmount(baseAmount, feeInput) {
+        const base = this.parseValue(baseAmount);
+        if (!feeInput && feeInput !== 0) return 0;
+        const raw = String(feeInput).trim();
+        if (!raw) return 0;
 
-        const vets = num(c.numVets), reps = num(c.numReps);
-        const people = Math.max(0, vets+reps);
+        const hasPct = raw.includes('%');
+        const hasDol = raw.includes('$');
+        const num = this.parseValue(raw);
 
-        const vetCommissionTotal = (totalAfterFees*vetRate)/100;
-        const repCommissionTotal = (totalAfterFees*repRate)/100;
+        if (hasDol) return num;              // explicit dollars
+        if (hasPct) return (base * num) / 100;
+        if (num > 100) return num;           // likely dollars
+        if (num > 1) return (base * num) / 100; // 3.5 => 3.5%
+        if (num > 0) return base * num;      // 0.035 => 3.5%
+        return 0;
+      },
 
-        const rideAlongCount = num(c.numRideAlongs);
-        const rideAlongEach  = num(c.rideAlong);
-        const rideAlongBonus = num(c.rideAlongBonus);
-        const rideAlongFeeTotal = rideAlongEach*rideAlongCount;
-        const rideAlongTotal = rideAlongFeeTotal + rideAlongBonus;
+      calculateOne(data) {
+        const contractAmount = this.parseValue(data.contractAmount);
+        const laborMaterial  = this.parseValue(data.laborMaterial);
+        const houseFeePercent= this.parseValue(data.houseFeePercent);
+        const houseFeeAmount = (contractAmount * houseFeePercent) / 100;
 
-        const perShared = people>0 ? (creditCardFeeAmount + rideAlongFeeTotal)/people : 0;
+        const dealerFeeAmount     = this.parseFeeAmount(data.financeAmount, data.dealerFee);
+        const creditCardFeeAmount = this.parseFeeAmount(data.creditCard, data.creditCardFee);
 
-        const perVet = (people>0 ? vetCommissionTotal/people : 0) - perShared;
-        const perRep = (people>0 ? repCommissionTotal/people : 0) - perShared;
+        const afterHouseFee  = contractAmount - houseFeeAmount;
+        const totalAfterFees = afterHouseFee - laborMaterial - dealerFeeAmount;
+        const percentOfContract = afterHouseFee > 0 ? (totalAfterFees / afterHouseFee) * 100 : 0;
 
-        const vetsTotal = perVet * vets;
-        const repsTotal = perRep * reps;
+        // Tier logic
+        let vetRate = 25;
+        if (percentOfContract >= 50) vetRate = 55;
+        else if (percentOfContract >= 40) vetRate = 45;
+        else if (percentOfContract >= 33) vetRate = 35;
 
-        const altaCalTotalPayout = laborMaterial + vetsTotal + repsTotal + rideAlongTotal + creditCardFeeAmount;
+        let repRate = 20;
+        if (percentOfContract >= 50) repRate = 40;
+        else if (percentOfContract >= 40) repRate = 30;
+        else if (percentOfContract >= 33) repRate = 25;
+
+        const vetsCount = this.parseValue(data.numVets);
+        const repsCount = this.parseValue(data.numReps);
+        const totalPeople = Math.max(0, vetsCount + repsCount);
+
+        const vetCommissionTotal = (totalAfterFees * vetRate) / 100;
+        const repCommissionTotal = (totalAfterFees * repRate) / 100;
+
+        // Ride-along math
+        const rideAlongCount      = this.parseValue(data.numRideAlongs);
+        const rideAlongFeeEach    = this.parseValue(data.rideAlong);
+        const rideAlongBonusAmount= this.parseValue(data.rideAlongBonus);
+        const totalRideAlongFee   = rideAlongFeeEach * rideAlongCount;
+        const totalRideAlongPayout= totalRideAlongFee + rideAlongBonusAmount;
+
+        // Distribute shared fees across people
+        const perPersonSharedFees = totalPeople > 0 ? (creditCardFeeAmount + totalRideAlongFee) / totalPeople : 0;
+        const perVetBase = totalPeople > 0 ? (vetCommissionTotal / totalPeople) : 0;
+        const perRepBase = totalPeople > 0 ? (repCommissionTotal / totalPeople) : 0;
+
+        const finalPerVetPayout   = perVetBase - perPersonSharedFees;
+        const finalPerRepPayout   = perRepBase - perPersonSharedFees;
+        const finalTotalVetsPayout= finalPerVetPayout * vetsCount;
+        const finalTotalRepsPayout= finalPerRepPayout * repsCount;
+
+        const altaCalTotalPayout = laborMaterial + finalTotalVetsPayout + finalTotalRepsPayout + totalRideAlongPayout + creditCardFeeAmount;
         const preliminaryProfit  = afterHouseFee - altaCalTotalPayout - dealerFeeAmount;
 
-        const canvasserPayout = preliminaryProfit * (num(c.canvasserPercent)/100);
-        const confirmerPayout = contractAmount    * (num(c.confirmerPercent)/100);
-        const elisoPayout     = contractAmount    * (num(c.elisoPercent)/100);
-        const prodMSPayout    = num(c.prodMSAmount)  * (num(c.prodMSPercent)/100);
-        const prodRSPayout    = num(c.prodRSAmount)  * (num(c.prodRSPercent)/100);
-        const prodNCPayout    = num(c.prodNCAmount)  * (num(c.prodNCPercent)/100);
-        const prodABEPayout   = num(c.prodABEAmount) * (num(c.prodABEPercent)/100);
+        // Additional team payouts
+        const canvasserPayout = preliminaryProfit * (this.parseValue(data.canvasserPercent) / 100);
+        const confirmerPayout = contractAmount * (this.parseValue(data.confirmerPercent) / 100);
+        const elisoPayout     = contractAmount * (this.parseValue(data.elisoPercent) / 100);
+        const prodMSPayout    = this.parseValue(data.prodMSAmount) * (this.parseValue(data.prodMSPercent) / 100);
+        const prodRSPayout    = this.parseValue(data.prodRSAmount) * (this.parseValue(data.prodRSPercent) / 100);
+        const prodNCPayout    = this.parseValue(data.prodNCAmount) * (this.parseValue(data.prodNCPercent) / 100);
+        const prodABEPayout   = this.parseValue(data.prodABEAmount) * (this.parseValue(data.prodABEPercent) / 100);
 
         const additionalTeamPayout = canvasserPayout + confirmerPayout + elisoPayout +
                                      prodMSPayout + prodRSPayout + prodNCPayout + prodABEPayout;
-
         const totalTeamPayout = altaCalTotalPayout + additionalTeamPayout;
-        const finalProfit     = preliminaryProfit  - additionalTeamPayout;
-        const profitPercent   = (afterHouseFee - dealerFeeAmount)>0 ? (finalProfit/(afterHouseFee-dealerFeeAmount))*100 : 0;
+        const finalProfit     = preliminaryProfit - additionalTeamPayout;
+        const profitPercent   = (afterHouseFee - dealerFeeAmount) > 0 ? (finalProfit / (afterHouseFee - dealerFeeAmount)) * 100 : 0;
 
         return {
           contractAmount, houseFeeAmount, dealerFeeAmount, creditCardFeeAmount, afterHouseFee,
-          percentOfContract, vetRate, repRate,
-          perVet, perRep, vetsTotal, repsTotal, rideAlongTotal,
-          preliminaryProfit, canvasserPayout, confirmerPayout, elisoPayout, prodMSPayout, prodRSPayout, prodNCPayout, prodABEPayout,
-          totalTeamPayout, finalProfit, profitPercent,
-          vets, reps, rideAlongCount
+          totalAfterFees, percentOfContract, vetRate, repRate, finalPerVetPayout, finalPerRepPayout,
+          finalTotalVetsPayout, finalTotalRepsPayout, totalRideAlongPayout, altaCalTotalPayout,
+          preliminaryProfit, canvasserPayout, confirmerPayout, elisoPayout, prodMSPayout, prodRSPayout,
+          prodNCPayout, prodABEPayout, additionalTeamPayout, totalTeamPayout, finalProfit, profitPercent,
+          vetsCount, repsCount, numRideAlongs: rideAlongCount
         };
       },
 
-      init(){
-        document.getElementById('collectionWeek').addEventListener('input', () => this.updateSummary());
-        this.addCalculator();
-      },
-
-      addCalculator(){
-        const c = {
-          id:this.nextId++,
-          customerName:'', jobNumber:'', contractAmount:'', cashCheck:'', financeAmount:'',
-          dealerFee:'', creditCard:'', creditCardFee:'', houseFeePercent:'', laborMaterial:'',
-          numVets:'', numReps:'', rideAlong:'', rideAlongBonus:'', numRideAlongs:'',
-          canvasserPercent:'2', confirmerPercent:'0.25', elisoPercent:'1.5',
-          prodMSPercent:'0.25', prodMSAmount:'', prodRSPercent:'0.25', prodRSAmount:'',
-          prodNCPercent:'0.25', prodNCAmount:'', prodABEPercent:'0.25', prodABEAmount:'',
-          moneyThisWeek:'', financeSource:'', bankDropDay:''
+      addCalculator() {
+        const calc = {
+          id: this.nextId++,
+          customerName: '', jobNumber: '', contractAmount: '', cashCheck: '', financeAmount: '',
+          dealerFee: '', creditCard: '', creditCardFee: '', houseFeePercent: '', laborMaterial: '',
+          numVets: '', numReps: '', rideAlong: '', rideAlongBonus: '', numRideAlongs: '',
+          canvasserPercent: '2', confirmerPercent: '0.25', elisoPercent: '1.5',
+          prodMSPercent: '0.25', prodMSAmount: '', prodRSPercent: '0.25', prodRSAmount: '',
+          prodNCPercent: '0.25', prodNCAmount: '', prodABEPercent: '0.25', prodABEAmount: '',
+          moneyThisWeek: '', financeSource: '', bankDropDay: ''
         };
-        this.calculators.push(c);
-        this.renderCalculator(c, this.calculators.length-1);
+        this.calculators.push(calc);
+        this.render();
+      },
+
+      deleteCalculator(id) {
+        if (this.calculators.length <= 1) {
+          alert('Cannot delete the last calculator');
+          return;
+        }
+        if (confirm('Delete this calculator?')) {
+          this.calculators = this.calculators.filter(c => c.id !== id);
+          this.updateSummary();
+          this.render(); // safe re-render after deletion
+        }
+      },
+
+      updateField(id, field, value) {
+        const calc = this.calculators.find(c => c.id === id);
+        if (calc) {
+          calc[field] = value;
+          // Do NOT full re-render on keystroke: preserves cursor & mobile keypad
+          this.updateSummary();
+        }
+      },
+
+      render() {
+        const container = document.getElementById('calculators');
+        container.innerHTML = this.calculators.map((calc, index) => this.renderCalculator(calc, index)).join('');
         this.updateSummary();
       },
 
-      deleteCalculator(id){
-        if (this.calculators.length<=1){ alert('Cannot delete the last calculator'); return; }
-        if (!confirm('Delete this calculator?')) return;
-        this.calculators = this.calculators.filter(x=>x.id!==id);
-        document.getElementById('calculators').innerHTML='';
-        this.calculators.forEach((c,i)=>this.renderCalculator(c,i));
-        this.updateSummary();
-      },
+      renderCalculator(calc, index) {
+        const d = this.calculateOne(calc);
+        const deleteBtn = this.calculators.length > 1 ? `<button class="delete-btn" onclick="app.deleteCalculator(${calc.id})">×</button>` : '';
 
-      renderCalculator(c, idx){
-        const root = document.createElement('div');
-        root.className='calculator'; root.id=`calc-${c.id}`;
-        const del = this.calculators.length>1 ? `<button class="delete-btn" onclick="app.deleteCalculator(${c.id})">×</button>` : '';
-        root.innerHTML = `
-          ${del}
-          <div class="calc-header">
-            <h2 style="font-size:18px;font-weight:700;">FILE #${idx+1}</h2>
-            <button class="btn btn-blue" onclick="app.printSingle(${idx})" style="padding:10px 16px;">🖨️</button>
-          </div>
-
-          <div class="calc-section">
-            <div class="form-grid" style="margin-bottom:20px;">
-              <div class="form-group">
-                <label>JOB NUMBER</label>
-                <input type="text" inputmode="text" value="${c.jobNumber}" oninput="app.updateField(${c.id},'jobNumber',this.value)">
-              </div>
-              <div class="form-group">
-                <label>CUSTOMER NAME</label>
-                <input type="text" inputmode="text" value="${c.customerName}" oninput="app.updateField(${c.id},'customerName',this.value)">
-              </div>
+        return `
+          <div class="calculator">
+            ${deleteBtn}
+            <div class="calc-header">
+              <h2 style="font-size: 18px; font-weight: 700;">FILE #${index + 1}</h2>
+              <button class="btn btn-blue" onclick="app.printSingle(${index})" style="padding: 10px 16px;">🖨️</button>
             </div>
 
-            <div class="section">
-              <div class="section-header blue">CONTRACT & PAYMENT</div>
-              <div class="section-content">
-                <div class="form-grid">
-                  ${[
-                    ['CONTRACT AMOUNT','contractAmount', '$'],
-                    ['CASH/CHECK','cashCheck','$'],
-                    ['LABOR & MATERIAL','laborMaterial','$'],
-                    ['FINANCE AMOUNT','financeAmount','$']
-                  ].map(([label,key,sym])=>`
+            <div class="calc-section">
+              <div class="form-grid" style="margin-bottom: 20px;">
+                <div class="form-group">
+                  <label>JOB NUMBER</label>
+                  <input type="text" inputmode="text" value="${calc.jobNumber}" oninput="app.updateField(${calc.id}, 'jobNumber', this.value)" />
+                </div>
+                <div class="form-group">
+                  <label>CUSTOMER NAME</label>
+                  <input type="text" inputmode="text" value="${calc.customerName}" oninput="app.updateField(${calc.id}, 'customerName', this.value)" />
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-header blue">CONTRACT & PAYMENT</div>
+                <div class="section-content">
+                  <div class="form-grid">
                     <div class="form-group">
-                      <label>${label}</label>
+                      <label>CONTRACT AMOUNT</label>
                       <div class="input-with-symbol">
-                        <span>${sym}</span>
-                        <input type="text" inputmode="decimal" value="${c[key]}" oninput="app.updateField(${c.id},'${key}',this.value)">
+                        <span>$</span>
+                        <input type="text" inputmode="decimal" value="${calc.contractAmount}" oninput="app.updateField(${calc.id}, 'contractAmount', this.value)" />
                       </div>
-                    </div>`).join('')}
-
-                  <div class="form-group">
-                    <label>DEALER FEE (% or $)</label>
-                    <input type="text" inputmode="decimal" value="${c.dealerFee}" placeholder="3.5 or $150" oninput="app.updateField(${c.id},'dealerFee',this.value)">
-                    <div id="v-${c.id}-dealer" style="text-align:center;font-weight:600;margin-top:5px;color:#2196F3;"></div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>HOUSE FEE %</label>
-                    <div class="input-with-symbol">
-                      <input type="text" inputmode="decimal" value="${c.houseFeePercent}" oninput="app.updateField(${c.id},'houseFeePercent',this.value)">
-                      <span>%</span>
                     </div>
-                    <div id="v-${c.id}-house" style="text-align:center;font-weight:600;margin-top:5px;"></div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>CREDIT CARD</label>
-                    <div class="input-with-symbol">
-                      <span>$</span>
-                      <input type="text" inputmode="decimal" value="${c.creditCard}" oninput="app.updateField(${c.id},'creditCard',this.value)">
-                    </div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>CC FEE (% or $)</label>
-                    <input type="text" inputmode="decimal" value="${c.creditCardFee}" placeholder="3.5 or $35" oninput="app.updateField(${c.id},'creditCardFee',this.value)">
-                    <div id="v-${c.id}-ccfee" style="text-align:center;font-weight:600;margin-top:5px;color:#2196F3;"></div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>AFTER HOUSE FEE</label>
-                    <div id="v-${c.id}-after" style="text-align:center; padding:15px; background:#BBDEFB; border-radius:6px; font-weight:700; font-size:18px;"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-header green">ALTA CAL TEAM</div>
-              <div class="section-content">
-                <div class="form-grid" style="margin-bottom:10px;">
-                  ${[
-                    ['VETS ON CONTRACT','numVets'],
-                    ['REPS ON CONTRACT','numReps'],
-                    ['RIDE ALONGS','numRideAlongs']
-                  ].map(([label,key])=>`
                     <div class="form-group">
-                      <label>${label}</label>
-                      <input type="text" inputmode="decimal" value="${c[key]}" oninput="app.updateField(${c.id},'${key}',this.value)" style="text-align:center;font-size:18px;">
-                    </div>`).join('')}
-                </div>
-
-                <div class="tier-results" id="v-${c.id}-tierWrap" style="display:none;">
-                  <div class="tier-info" id="v-${c.id}-tierInfo"></div>
-                  <div class="tier-grid">
-                    <div class="tier-person" id="v-${c.id}-vetsBox" style="display:none;">
-                      <div id="v-${c.id}-vetsCount" style="font-weight:700;text-align:center;margin-bottom:8px;"></div>
-                      <div class="tier-box light">
-                        <div class="tier-label">Per Vet</div>
-                        <div class="tier-value" id="v-${c.id}-perVet" style="color:#2E7D32;"></div>
-                      </div>
-                      <div class="tier-box bold">
-                        <div class="tier-label">Total</div>
-                        <div class="tier-value" id="v-${c.id}-vetsTotal" style="color:#1B5E20;"></div>
+                      <label>CASH/CHECK</label>
+                      <div class="input-with-symbol">
+                        <span>$</span>
+                        <input type="text" inputmode="decimal" value="${calc.cashCheck}" oninput="app.updateField(${calc.id}, 'cashCheck', this.value)" />
                       </div>
                     </div>
-
-                    <div class="tier-person" id="v-${c.id}-repsBox" style="display:none;">
-                      <div id="v-${c.id}-repsCount" style="font-weight:700;text-align:center;margin-bottom:8px;"></div>
-                      <div class="tier-box purple-light">
-                        <div class="tier-label">Per Rep</div>
-                        <div class="tier-value" id="v-${c.id}-perRep" style="color:#6A1B9A;"></div>
-                      </div>
-                      <div class="tier-box purple-bold">
-                        <div class="tier-label">Total</div>
-                        <div class="tier-value" id="v-${c.id}-repsTotal" style="color:#4A148C;"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-grid" style="margin-top:10px;">
-                  <div class="form-group">
-                    <label style="color:#D32F2F;">RIDE ALONG FEE (each)</label>
-                    <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;">
-                      <span>$</span>
-                      <input type="text" inputmode="decimal" value="${c.rideAlong}" oninput="app.updateField(${c.id},'rideAlong',this.value)" style="background:transparent;">
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label style="color:#D32F2F;">RIDE ALONG BONUS (flat)</label>
-                    <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;">
-                      <span>$</span>
-                      <input type="text" inputmode="decimal" value="${c.rideAlongBonus}" oninput="app.updateField(${c.id},'rideAlongBonus',this.value)" style="background:transparent;">
-                    </div>
-                  </div>
-                  <div class="form-group" id="v-${c.id}-rideWrap" style="display:none;">
-                    <label>RIDE ALONG PAYOUT</label>
-                    <div id="v-${c.id}-rideTotal" style="text-align:center; padding:12px; background:#FFCDD2; border:2px solid #EF5350; border-radius:6px; font-weight:700; font-size:16px;"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-header purple">ADDITIONAL TEAM</div>
-              <div class="section-content">
-                <div style="text-align:center; padding:12px; background:#E1BEE7; border:2px solid #9C27B0; border-radius:6px; font-weight:700; margin-bottom:12px;">
-                  <div style="font-size:11px; margin-bottom:4px;">ALTA CAL PROFIT</div>
-                  <div id="v-${c.id}-preProfit" style="font-size:18px;"></div>
-                </div>
-
-                <div class="form-grid">
-                  ${[
-                    ['CANVASSER %','canvasserPercent','canvasserAmt'],
-                    ['CONFIRMER %','confirmerPercent','confirmerAmt'],
-                    ['ELISO %','elisoPercent','elisoAmt'],
-                  ].map(([lbl,pct,idTxt])=>`
                     <div class="form-group">
-                      <label>${lbl}</label>
-                      <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="text" inputmode="decimal" value="${c[pct]}" oninput="app.updateField(${c.id},'${pct}',this.value)" style="width:70px;">
-                        <span style="font-size:13px;">% = <span id="v-${c.id}-${idTxt}"></span></span>
+                      <label>LABOR & MATERIAL</label>
+                      <div class="input-with-symbol">
+                        <span>$</span>
+                        <input type="text" inputmode="decimal" value="${calc.laborMaterial}" oninput="app.updateField(${calc.id}, 'laborMaterial', this.value)" />
                       </div>
-                    </div>`).join('')}
-                </div>
-
-                <div class="form-grid" style="margin-top:12px;">
-                  ${[
-                    ['MS','prodMSPercent','prodMSAmount','msAmt'],
-                    ['RS','prodRSPercent','prodRSAmount','rsAmt'],
-                    ['NC','prodNCPercent','prodNCAmount','ncAmt'],
-                    ['ABE','prodABEPercent','prodABEAmount','abeAmt'],
-                  ].map(([lbl,pct,amt,slot])=>`
+                    </div>
                     <div class="form-group">
-                      <label>PROD ${lbl}</label>
-                      <div style="display:flex; gap:6px; align-items:center; font-size:13px;">
-                        <input type="text" inputmode="decimal" value="${c[pct]}" oninput="app.updateField(${c.id},'${pct}',this.value)" style="width:50px;">
+                      <label>FINANCE AMOUNT</label>
+                      <div class="input-with-symbol">
+                        <span>$</span>
+                        <input type="text" inputmode="decimal" value="${calc.financeAmount}" oninput="app.updateField(${calc.id}, 'financeAmount', this.value)" />
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>DEALER FEE (% or $)</label>
+                      <input type="text" inputmode="decimal" value="${calc.dealerFee}" placeholder="3.5 or $150" oninput="app.updateField(${calc.id}, 'dealerFee', this.value)" />
+                      ${d.dealerFeeAmount > 0 ? `<div style="text-align: center; font-weight: 600; margin-top: 5px; color: #2196F3;">${this.fmt(d.dealerFeeAmount)}</div>` : ''}
+                    </div>
+                    <div class="form-group">
+                      <label>HOUSE FEE %</label>
+                      <div class="input-with-symbol">
+                        <input type="text" inputmode="decimal" value="${calc.houseFeePercent}" oninput="app.updateField(${calc.id}, 'houseFeePercent', this.value)" />
                         <span>%</span>
-                        <input type="text" inputmode="decimal" value="${c[amt]}" oninput="app.updateField(${c.id},'${amt}',this.value)" style="width:80px;">
-                        <span>= <span id="v-${c.id}-${slot}"></span></span>
                       </div>
-                    </div>`).join('')}
-                </div>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-header yellow">FINANCE & BANK</div>
-              <div class="section-content">
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>MONEY THIS WEEK</label>
-                    <div class="input-with-symbol">
-                      <span>$</span>
-                      <input type="text" inputmode="decimal" value="${c.moneyThisWeek}" oninput="app.updateField(${c.id},'moneyThisWeek',this.value)">
+                      ${d.houseFeeAmount > 0 ? `<div style="text-align: center; font-weight: 600; margin-top: 5px;">${this.fmt(d.houseFeeAmount)}</div>` : ''}
+                    </div>
+                    <div class="form-group">
+                      <label>CREDIT CARD</label>
+                      <div class="input-with-symbol">
+                        <span>$</span>
+                        <input type="text" inputmode="decimal" value="${calc.creditCard}" oninput="app.updateField(${calc.id}, 'creditCard', this.value)" />
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>CC FEE (% or $)</label>
+                      <input type="text" inputmode="decimal" value="${calc.creditCardFee}" placeholder="3.5 or $35" oninput="app.updateField(${calc.id}, 'creditCardFee', this.value)" />
+                      ${d.creditCardFeeAmount > 0 ? `<div style="text-align: center; font-weight: 600; margin-top: 5px; color: #2196F3;">${this.fmt(d.creditCardFeeAmount)}</div>` : ''}
+                    </div>
+                    <div class="form-group">
+                      <label>AFTER HOUSE FEE</label>
+                      <div style="text-align: center; padding: 15px; background: #BBDEFB; border-radius: 6px; font-weight: 700; font-size: 18px;">
+                        ${this.fmt(d.afterHouseFee)}
+                      </div>
                     </div>
                   </div>
-                  <div class="form-group">
-                    <label>FINANCE SOURCE</label>
-                    <select oninput="app.updateField(${c.id},'financeSource',this.value)">
-                      <option value="" ${c.financeSource===''?'selected':''}>Select</option>
-                      <option value="Finance" ${c.financeSource==='Finance'?'selected':''}>Finance</option>
-                      <option value="Cash" ${c.financeSource==='Cash'?'selected':''}>Cash</option>
-                      <option value="Both" ${c.financeSource==='Both'?'selected':''}>Both</option>
-                    </select>
+                </div>
+              </div>
+
+              <div class="section">
+                <div class="section-header green">ALTA CAL TEAM</div>
+                <div class="section-content">
+                  <div class="form-grid" style="margin-bottom: 10px;">
+                    <div class="form-group">
+                      <label>VETS ON CONTRACT</label>
+                      <input type="text" inputmode="decimal" value="${calc.numVets}" oninput="app.updateField(${calc.id}, 'numVets', this.value)" style="text-align: center; font-size: 18px;" />
+                    </div>
+                    <div class="form-group">
+                      <label>REPS ON CONTRACT</label>
+                      <input type="text" inputmode="decimal" value="${calc.numReps}" oninput="app.updateField(${calc.id}, 'numReps', this.value)" style="text-align: center; font-size: 18px;" />
+                    </div>
+                    <div class="form-group">
+                      <label>RIDE ALONGS</label>
+                      <input type="text" inputmode="decimal" value="${calc.numRideAlongs}" oninput="app.updateField(${calc.id}, 'numRideAlongs', this.value)" style="text-align: center; font-size: 18px;" />
+                    </div>
                   </div>
-                  <div class="form-group">
-                    <label>BANK DROP DAY</label>
-                    <select oninput="app.updateField(${c.id},'bankDropDay',this.value)">
-                      <option value="" ${c.bankDropDay===''?'selected':''}>Select Day</option>
-                      ${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`
-                        <option value="${d}" ${c.bankDropDay===d?'selected':''}>${d}</option>`).join('')}
-                    </select>
+
+                  ${(d.vetsCount > 0 || d.repsCount > 0) ? `
+                    <div class="tier-results">
+                      <div class="tier-info">
+                        Profit: ${d.percentOfContract.toFixed(1)}% → Vet: ${d.vetRate}% | Rep: ${d.repRate}%
+                      </div>
+                      <div class="tier-grid">
+                        ${d.vetsCount > 0 ? `
+                          <div class="tier-person">
+                            <div style="font-weight: 700; text-align: center; margin-bottom: 8px;">VETS: ${d.vetsCount}</div>
+                            <div class="tier-box light">
+                              <div class="tier-label">Per Vet</div>
+                              <div class="tier-value" style="color: #2E7D32;">${this.fmt(d.finalPerVetPayout)}</div>
+                            </div>
+                            <div class="tier-box bold">
+                              <div class="tier-label">Total</div>
+                              <div class="tier-value" style="color: #1B5E20;">${this.fmt(d.finalTotalVetsPayout)}</div>
+                            </div>
+                          </div>
+                        ` : ''}
+                        ${d.repsCount > 0 ? `
+                          <div class="tier-person">
+                            <div style="font-weight: 700; text-align: center; margin-bottom: 8px;">REPS: ${d.repsCount}</div>
+                            <div class="tier-box purple-light">
+                              <div class="tier-label">Per Rep</div>
+                              <div class="tier-value" style="color: #6A1B9A;">${this.fmt(d.finalPerRepPayout)}</div>
+                            </div>
+                            <div class="tier-box purple-bold">
+                              <div class="tier-label">Total</div>
+                              <div class="tier-value" style="color: #4A148C;">${this.fmt(d.finalTotalRepsPayout)}</div>
+                            </div>
+                          </div>
+                        ` : ''}
+                      </div>
+                    </div>
+                  ` : ''}
+
+                  <div class="form-grid" style="margin-top: 10px;">
+                    <div class="form-group">
+                      <label style="color: #D32F2F;">RIDE ALONG FEE (each)</label>
+                      <div class="input-with-symbol" style="background: #FFEBEE; border-color: #EF5350;">
+                        <span>$</span>
+                        <input type="text" inputmode="decimal" value="${calc.rideAlong}" oninput="app.updateField(${calc.id}, 'rideAlong', this.value)" style="background: transparent;" />
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label style="color: #D32F2F;">RIDE ALONG BONUS (flat)</label>
+                      <div class="input-with-symbol" style="background: #FFEBEE; border-color: #EF5350;">
+                        <span>$</span>
+                        <input type="text" inputmode="decimal" value="${calc.rideAlongBonus}" oninput="app.updateField(${calc.id}, 'rideAlongBonus', this.value)" style="background: transparent;" />
+                      </div>
+                    </div>
+                    ${d.numRideAlongs > 0 ? `
+                      <div class="form-group">
+                        <label>RIDE ALONG PAYOUT</label>
+                        <div style="text-align: center; padding: 12px; background: #FFCDD2; border: 2px solid #EF5350; border-radius: 6px; font-weight: 700; font-size: 16px;">
+                          ${this.fmt(d.totalRideAlongPayout)}
+                        </div>
+                      </div>
+                    ` : ''}
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
-              <div class="big-card blue">
-                <div class="label">ALTA CAL PAYOUT</div>
-                <div class="value" id="v-${c.id}-totalPayout"></div>
+              <div class="section">
+                <div class="section-header purple">ADDITIONAL TEAM</div>
+                <div class="section-content">
+                  <div style="text-align: center; padding: 12px; background: #E1BEE7; border: 2px solid #9C27B0; border-radius: 6px; font-weight: 700; margin-bottom: 12px;">
+                    <div style="font-size: 11px; margin-bottom: 4px;">ALTA CAL PROFIT</div>
+                    <div style="font-size: 18px;">${this.fmt(d.preliminaryProfit)}</div>
+                  </div>
+
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label>CANVASSER %</label>
+                      <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" inputmode="decimal" value="${calc.canvasserPercent}" oninput="app.updateField(${calc.id}, 'canvasserPercent', this.value)" class="input-pct" />
+                        <span style="font-size: 13px;">% = ${this.fmt(d.canvasserPayout)}</span>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>CONFIRMER %</label>
+                      <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" inputmode="decimal" value="${calc.confirmerPercent}" oninput="app.updateField(${calc.id}, 'confirmerPercent', this.value)" class="input-pct" />
+                        <span style="font-size: 13px;">% = ${this.fmt(d.confirmerPayout)}</span>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>ELISO %</label>
+                      <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" inputmode="decimal" value="${calc.elisoPercent}" oninput="app.updateField(${calc.id}, 'elisoPercent', this.value)" class="input-pct" />
+                        <span style="font-size: 13px;">% = ${this.fmt(d.elisoPayout)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="form-grid" style="margin-top: 12px;">
+                    <div class="form-group">
+                      <label>PROD MS</label>
+                      <div style="display: flex; gap: 6px; align-items: center; font-size: 13px;">
+                        <input type="text" inputmode="decimal" value="${calc.prodMSPercent}" oninput="app.updateField(${calc.id}, 'prodMSPercent', this.value)" class="input-pct-small" />
+                        <span>%</span>
+                        <input type="text" inputmode="decimal" value="${calc.prodMSAmount}" oninput="app.updateField(${calc.id}, 'prodMSAmount', this.value)" style="width: 80px;" />
+                        <span>= ${this.fmt(d.prodMSPayout)}</span>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>PROD RS</label>
+                      <div style="display: flex; gap: 6px; align-items: center; font-size: 13px;">
+                        <input type="text" inputmode="decimal" value="${calc.prodRSPercent}" oninput="app.updateField(${calc.id}, 'prodRSPercent', this.value)" class="input-pct-small" />
+                        <span>%</span>
+                        <input type="text" inputmode="decimal" value="${calc.prodRSAmount}" oninput="app.updateField(${calc.id}, 'prodRSAmount', this.value)" style="width: 80px;" />
+                        <span>= ${this.fmt(d.prodRSPayout)}</span>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>PROD NC</label>
+                      <div style="display: flex; gap: 6px; align-items: center; font-size: 13px;">
+                        <input type="text" inputmode="decimal" value="${calc.prodNCPercent}" oninput="app.updateField(${calc.id}, 'prodNCPercent', this.value)" class="input-pct-small" />
+                        <span>%</span>
+                        <input type="text" inputmode="decimal" value="${calc.prodNCAmount}" oninput="app.updateField(${calc.id}, 'prodNCAmount', this.value)" style="width: 80px;" />
+                        <span>= ${this.fmt(d.prodNCPayout)}</span>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>PROD ABE</label>
+                      <div style="display: flex; gap: 6px; align-items: center; font-size: 13px;">
+                        <input type="text" inputmode="decimal" value="${calc.prodABEPercent}" oninput="app.updateField(${calc.id}, 'prodABEPercent', this.value)" class="input-pct-small" />
+                        <span>%</span>
+                        <input type="text" inputmode="decimal" value="${calc.prodABEAmount}" oninput="app.updateField(${calc.id}, 'prodABEAmount', this.value)" style="width: 80px;" />
+                        <span>= ${this.fmt(d.prodABEPayout)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="big-card green">
-                <div class="label">ALTA CAL PROFIT</div>
-                <div class="value" id="v-${c.id}-finalProfit"></div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="big-card blue">
+                  <div class="label">ALTA CAL PAYOUT</div>
+                  <div class="value">${this.fmt(d.totalTeamPayout)}</div>
+                </div>
+                <div class="big-card green">
+                  <div class="label">ALTA CAL PROFIT</div>
+                  <div class="value">${this.fmt(d.finalProfit)}</div>
+                </div>
               </div>
             </div>
           </div>
         `;
-        document.getElementById('calculators').appendChild(root);
-        this.updateComputed(c.id);
       },
 
-      updateField(id, key, val){
-        const c = this.calculators.find(x=>x.id===id);
-        if (!c) return;
-        c[key] = val;
-        this.updateComputed(id);
-        this.updateSummary();
-      },
-
-      updateComputed(id){
-        const c = this.calculators.find(x=>x.id===id);
-        if (!c) return;
-        const d = this.calc(c);
-
-        const set = (slot, value) => {
-          const el = document.getElementById(`v-${id}-${slot}`);
-          if (el) el.textContent = value;
-        };
-
-        set('dealer', d.dealerFeeAmount>0 ? fmt(d.dealerFeeAmount) : '');
-        set('house',  d.houseFeeAmount>0 ? fmt(d.houseFeeAmount) : '');
-        set('ccfee',  d.creditCardFeeAmount>0 ? fmt(d.creditCardFeeAmount) : '');
-        set('after',  fmt(d.afterHouseFee));
-
-        // tier block
-        const showTier = (d.vets>0 || d.reps>0);
-        const tierWrap = document.getElementById(`v-${id}-tierWrap`);
-        if (tierWrap) tierWrap.style.display = showTier ? '' : 'none';
-        if (showTier){
-          set('tierInfo', `Profit: ${d.percentOfContract.toFixed(1)}% → Vet: ${d.vetRate}% | Rep: ${d.repRate}%`);
-          const vb = document.getElementById(`v-${id}-vetsBox`);
-          const rb = document.getElementById(`v-${id}-repsBox`);
-          if (d.vets>0){
-            vb.style.display=''; set('vetsCount',`VETS: ${d.vets}`); set('perVet',fmt(d.perVet)); set('vetsTotal',fmt(d.vetsTotal));
-          } else { vb.style.display='none'; }
-          if (d.reps>0){
-            rb.style.display=''; set('repsCount',`REPS: ${d.reps}`); set('perRep',fmt(d.perRep)); set('repsTotal',fmt(d.repsTotal));
-          } else { rb.style.display='none'; }
-        }
-
-        // ride along
-        const rideWrap = document.getElementById(`v-${id}-rideWrap`);
-        if (rideWrap) rideWrap.style.display = (d.rideAlongCount>0 || num(c.rideAlongBonus)>0) ? '' : 'none';
-        set('rideTotal', fmt(d.rideAlongTotal));
-
-        // additional team + totals
-        set('preProfit', fmt(d.preliminaryProfit));
-        set('canvasserAmt', fmt(d.canvasserPayout));
-        set('confirmerAmt', fmt(d.confirmerPayout));
-        set('elisoAmt',     fmt(d.elisoPayout));
-        set('msAmt',        fmt(d.prodMSPayout));
-        set('rsAmt',        fmt(d.prodRSPayout));
-        set('ncAmt',        fmt(d.prodNCPayout));
-        set('abeAmt',       fmt(d.prodABEPayout));
-        set('totalPayout',  fmt(d.totalTeamPayout));
-        set('finalProfit',  fmt(d.finalProfit));
-      },
-
-      updateSummary(){
-        let totalPayout=0,totalProfit=0,totalMoney=0,base=0;
-        this.calculators.forEach(c=>{
-          const d = this.calc(c);
+      updateSummary() {
+        let totalPayout = 0, totalProfit = 0, totalMoney = 0, totalAfterHouse = 0;
+        this.calculators.forEach(calc => {
+          const d = this.calculateOne(calc);
           totalPayout += d.totalTeamPayout;
           totalProfit += d.finalProfit;
-          totalMoney  += num(c.moneyThisWeek);
-          base        += (d.afterHouseFee - d.dealerFeeAmount);
+          totalMoney  += this.parseValue(calc.moneyThisWeek);
+          totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
         });
-        const pct = base>0 ? (totalProfit/base)*100 : 0;
+        const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
         document.getElementById('summaryCards').innerHTML = `
-          <div class="summary-card blue"><div class="label">TOTAL PAYOUT</div><div class="value">${fmt(totalPayout)}</div></div>
-          <div class="summary-card purple"><div class="label">TOTAL PROFIT</div><div class="value">${fmt(totalProfit)}</div></div>
-          <div class="summary-card green"><div class="label">PROFIT %</div><div class="value">${pct.toFixed(2)}%</div></div>
-          <div class="summary-card red"><div class="label">MONEY THIS WEEK</div><div class="value">${fmt(totalMoney)}</div></div>
-        `;
+          <div class="summary-card blue"><div class="label">TOTAL PAYOUT</div><div class="value">${this.fmt(totalPayout)}</div></div>
+          <div class="summary-card purple"><div class="label">TOTAL PROFIT</div><div class="value">${this.fmt(totalProfit)}</div></div>
+          <div class="summary-card green"><div class="label">PROFIT %</div><div class="value">${profitPercent.toFixed(2)}%</div></div>
+          <div class="summary-card red"><div class="label">MONEY THIS WEEK</div><div class="value">${this.fmt(totalMoney)}</div></div>`;
       },
 
-      printSingle(i){
-        const c = this.calculators[i];
-        const d = this.calc(c);
+      printSingle(index) {
+        const c = this.calculators[index];
+        const d = this.calculateOne(c);
         const week = document.getElementById('collectionWeek').value || 'Not Specified';
         const html = `
-          <div style="padding:20px;font-size:11px;">
-            <h1 style="text-align:center;font-size:20px;margin-bottom:15px;border-bottom:2px solid #2196F3;padding-bottom:10px;">
-              FILE #${i+1} - ${c.customerName || 'N/A'}
+          <div style="padding: 20px; font-size: 11px;">
+            <h1 style="text-align: center; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #2196F3; padding-bottom: 10px;">
+              FILE #${index + 1} - ${c.customerName || 'N/A'}
             </h1>
-            ${week!=='Not Specified' ? `<div style="text-align:center;font-weight:700;margin-bottom:15px;">Week: ${week}</div>` : ''}
+            ${week !== 'Not Specified' ? `<div style="text-align: center; font-weight: 700; margin-bottom: 15px;">Week: ${week}</div>` : ''}
 
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px;">
-              <div style="background:#BBDEFB;padding:10px;border-radius:4px;">
-                <strong>Contract:</strong> ${fmt(d.contractAmount)}<br/>
-                <strong>After House:</strong> ${fmt(d.afterHouseFee)}
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+              <div style="background: #BBDEFB; padding: 10px; border-radius: 4px;">
+                <strong>Contract:</strong> ${this.fmt(d.contractAmount)}<br />
+                <strong>After House:</strong> ${this.fmt(d.afterHouseFee)}
               </div>
-              <div style="background:#C8E6C9;padding:10px;border-radius:4px;">
-                <strong>ALTA CAL Payout:</strong> ${fmt(d.totalTeamPayout)}<br/>
+              <div style="background: #C8E6C9; padding: 10px; border-radius: 4px;">
+                <strong>ALTA CAL Payout:</strong> ${this.fmt(d.totalTeamPayout)}<br />
                 <strong>Profit Rate:</strong> ${d.percentOfContract.toFixed(1)}%
               </div>
-              <div style="background:#E1BEE7;padding:10px;border-radius:4px;">
-                <strong>ALTA CAL Profit:</strong> ${fmt(d.finalProfit)}<br/>
+              <div style="background: #E1BEE7; padding: 10px; border-radius: 4px;">
+                <strong>ALTA CAL Profit:</strong> ${this.fmt(d.finalProfit)}<br />
                 <strong>Vet ${d.vetRate}% | Rep ${d.repRate}%</strong>
               </div>
             </div>
+
+            ${(d.vetsCount > 0 || d.repsCount > 0) ? `
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                ${d.vetsCount > 0 ? `
+                  <div style="border: 2px solid #4CAF50; padding: 10px; border-radius: 4px;">
+                    <div style="font-weight: 700; margin-bottom: 5px;">VETS: ${d.vetsCount}</div>
+                    <div>Per: ${this.fmt(d.finalPerVetPayout)}</div>
+                    <div><strong>Total: ${this.fmt(d.finalTotalVetsPayout)}</strong></div>
+                  </div>` : ''}
+                ${d.repsCount > 0 ? `
+                  <div style="border: 2px solid #9C27B0; padding: 10px; border-radius: 4px;">
+                    <div style="font-weight: 700; margin-bottom: 5px;">REPS: ${d.repsCount}</div>
+                    <div>Per: ${this.fmt(d.finalPerRepPayout)}</div>
+                    <div><strong>Total: ${this.fmt(d.finalTotalRepsPayout)}</strong></div>
+                  </div>` : ''}
+              </div>
+            ` : ''}
+
+            <div class="no-print" style="margin-top: 20px; text-align: center;">
+              <button onclick="window.print()" style="background: #2196F3; color: white; padding: 12px 30px; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; margin-right: 10px;">🖨️ PRINT</button>
+              <button onclick="app.closePrint()" style="background: #757575; color: white; padding: 12px 30px; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer;">CLOSE</button>
+            </div>
           </div>`;
+
         document.getElementById('printView').innerHTML = html;
-        document.getElementById('mainView').style.display='none';
-        document.getElementById('printView').style.display='block';
+        document.getElementById('mainView').style.display = 'none';
+        document.getElementById('printView').style.display = 'block';
       },
 
-      // COMBINED REPORT — includes Bank Drop Day column and sorts Monday→Saturday
-      showPrintReport(){
+      showPrintReport() {
         const week = document.getElementById('collectionWeek').value || 'Not Specified';
+        let totalPayout = 0, totalProfit = 0, totalMoney = 0, totalAfterHouse = 0;
 
-        const rows = this.calculators
-          .map((c,i)=>({i, c, d:this.calc(c)}))
-          .sort((a,b)=>{
-            const da = dayIndex(a.c.bankDropDay), db = dayIndex(b.c.bankDropDay);
-            return da===db ? a.i - b.i : da - db;
-          })
-          .map(({i,c,d})=>`
+        let rows = '';
+        this.calculators.forEach((c, index) => {
+          const d = this.calculateOne(c);
+          totalPayout += d.totalTeamPayout;
+          totalProfit += d.finalProfit;
+          totalMoney  += this.parseValue(c.moneyThisWeek);
+          totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
+
+          rows += `
             <tr>
-              <td style="border:1px solid #000;padding:6px;text-align:center;">${i+1}</td>
-              <td style="border:1px solid #000;padding:6px;">${c.jobNumber||'-'}</td>
-              <td style="border:1px solid #000;padding:6px;">${c.customerName||'-'}</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;">${fmt(d.contractAmount)}</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;">${fmt(d.totalTeamPayout)}</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;">${fmt(d.finalProfit)}</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;">${d.profitPercent.toFixed(2)}%</td>
-              <td style="border:1px solid #000;padding:6px;text-align:center;">${c.bankDropDay||'-'}</td>
-              <td style="border:1px solid #000;padding:6px;text-align:right;font-weight:700;">${fmt(num(c.moneyThisWeek))}</td>
-            </tr>`).join('');
+              <td style="border: 1px solid #000; padding: 6px; text-align: center;">${index + 1}</td>
+              <td style="border: 1px solid #000; padding: 6px;">${c.jobNumber || '-'}</td>
+              <td style="border: 1px solid #000; padding: 6px;">${c.customerName || '-'}</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right;">${this.fmt(d.contractAmount)}</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right;">${this.fmt(d.totalTeamPayout)}</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right;">${this.fmt(d.finalProfit)}</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right;">${d.profitPercent.toFixed(2)}%</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: 700;">${this.fmt(this.parseValue(c.moneyThisWeek))}</td>
+            </tr>`;
+        });
 
-        const totals = this.calculators.reduce((acc,c)=>{
-          const d = this.calc(c);
-          acc.payout += d.totalTeamPayout;
-          acc.profit += d.finalProfit;
-          acc.money  += num(c.moneyThisWeek);
-          acc.base   += (d.afterHouseFee - d.dealerFeeAmount);
-          return acc;
-        }, {payout:0, profit:0, money:0, base:0});
-        const pct = totals.base>0 ? (totals.profit/totals.base)*100 : 0;
+        const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
+
+        /* Grouped section: Bank Drop Day (Monday→Saturday, then Unassigned) */
+        const grouped = {};
+        DAYS.concat(['Unassigned']).forEach(d => grouped[d] = []);
+        this.calculators.forEach((c, i) => {
+          const d = this.calculateOne(c);
+          const key = (c.bankDropDay && DAYS.includes(c.bankDropDay)) ? c.bankDropDay : 'Unassigned';
+          grouped[key].push({
+            idx: i+1,
+            job: c.jobNumber || '-',
+            cust: c.customerName || '-',
+            contract: this.fmt(d.contractAmount),
+            payout: this.fmt(d.totalTeamPayout),
+            profit: this.fmt(d.finalProfit),
+            pct: d.profitPercent.toFixed(2) + '%',
+            week: this.fmt(this.parseValue(c.moneyThisWeek))
+          });
+        });
+
+        const orderedKeys = Object.keys(grouped).sort((a,b)=>{
+          const ia = DAYS.indexOf(a), ib = DAYS.indexOf(b);
+          return (ia===-1?99:ia) - (ib===-1?99:ib);
+        });
+
+        const groupedBlocks = orderedKeys
+          .filter(day => grouped[day].length > 0)
+          .map(day => `
+            <div style="margin-top:16px;border:1px solid #bbb;border-radius:6px;background:#fff;">
+              <div style="background:#f0f0f0;padding:8px 12px;font-weight:700;">${day}</div>
+              <div style="padding:10px;">
+                ${grouped[day].map(r => `
+                  <div style="display:grid;grid-template-columns:40px 1fr 1fr 110px 110px 110px 70px 110px;gap:8px;border-bottom:1px dashed #ddd;padding:6px 0;">
+                    <div>#${r.idx}</div>
+                    <div>${r.job}</div>
+                    <div>${r.cust}</div>
+                    <div style="text-align:right;">${r.contract}</div>
+                    <div style="text-align:right;">${r.payout}</div>
+                    <div style="text-align:right;">${r.profit}</div>
+                    <div style="text-align:right;">${r.pct}</div>
+                    <div style="text-align:right;">${r.week}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('');
 
         const html = `
-          <div style="padding:20px;font-size:10px;">
-            <h1 style="text-align:center;font-size:18px;margin-bottom:10px;">COMBINED PROFIT REPORT</h1>
-            ${week!=='Not Specified'?`<h2 style="text-align:center;font-size:14px;margin-bottom:15px;">Week: ${week}</h2>`:''}
-            <table style="width:100%;border-collapse:collapse;border:2px solid #000;margin-bottom:20px;">
+          <div style="padding: 20px; font-size: 10px;">
+            <h1 style="text-align: center; font-size: 18px; margin-bottom: 10px;">COMBINED PROFIT REPORT</h1>
+            ${week !== 'Not Specified' ? `<h2 style="text-align: center; font-size: 14px; margin-bottom: 15px;">Week: ${week}</h2>` : ''}
+
+            <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 20px;">
               <thead>
-                <tr style="background:#e0e0e0;">
-                  <th style="border:1px solid #000;padding:8px;">#</th>
-                  <th style="border:1px solid #000;padding:8px;">Job</th>
-                  <th style="border:1px solid #000;padding:8px;">Customer</th>
-                  <th style="border:1px solid #000;padding:8px;">Contract</th>
-                  <th style="border:1px solid #000;padding:8px;">Payout</th>
-                  <th style="border:1px solid #000;padding:8px;">Profit</th>
-                  <th style="border:1px solid #000;padding:8px;">%</th>
-                  <th style="border:1px solid #000;padding:8px;">Bank Day</th>
-                  <th style="border:1px solid #000;padding:8px;">This Week</th>
+                <tr style="background: #e0e0e0;">
+                  <th style="border: 1px solid #000; padding: 8px;">#</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Job</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Customer</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Contract</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Payout</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Profit</th>
+                  <th style="border: 1px solid #000; padding: 8px;">%</th>
+                  <th style="border: 1px solid #000; padding: 8px;">This Week</th>
                 </tr>
               </thead>
               <tbody>
-                ${rows || `<tr><td colspan="9" style="border:1px solid #000;padding:8px;text-align:center;">No rows</td></tr>`}
-                <tr style="background:#FFF9C4;font-weight:700;">
-                  <td colspan="4" style="border:1px solid #000;padding:8px;text-align:right;">TOTALS:</td>
-                  <td style="border:1px solid #000;padding:8px;text-align:right;">${fmt(totals.payout)}</td>
-                  <td style="border:1px solid #000;padding:8px;text-align:right;">${fmt(totals.profit)}</td>
-                  <td style="border:1px solid #000;padding:8px;text-align:right;">${pct.toFixed(2)}%</td>
-                  <td style="border:1px solid #000;padding:8px;text-align:center;">—</td>
-                  <td style="border:1px solid #000;padding:8px;text-align:right;">${fmt(totals.money)}</td>
+                ${rows}
+                <tr style="background: #FFF9C4; font-weight: 700;">
+                  <td colspan="4" style="border: 1px solid #000; padding: 8px; text-align: right;">TOTALS:</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalPayout)}</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalProfit)}</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: right;">${profitPercent.toFixed(2)}%</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalMoney)}</td>
                 </tr>
               </tbody>
             </table>
 
-            <div class="no-print" style="text-align:center;margin-top:20px;">
-              <button onclick="window.print()" style="background:#2196F3;color:#fff;padding:12px 30px;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;margin-right:10px;">🖨️ PRINT</button>
-              <button onclick="app.closePrint()" style="background:#757575;color:#fff;padding:12px 30px;border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;">CLOSE</button>
+            <h3 style="margin-top:16px; text-align:left;">Bank Drop Day — Grouped</h3>
+            ${groupedBlocks || '<div style="margin-top:8px;">No entries</div>'}
+
+            <div class="no-print" style="text-align: center; margin-top: 20px;">
+              <button onclick="window.print()" style="background: #2196F3; color: white; padding: 12px 30px; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; margin-right: 10px;">🖨️ PRINT</button>
+              <button onclick="app.closePrint()" style="background: #757575; color: white; padding: 12px 30px; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer;">CLOSE</button>
             </div>
           </div>`;
+
         document.getElementById('printView').innerHTML = html;
-        document.getElementById('mainView').style.display='none';
-        document.getElementById('printView').style.display='block';
+        document.getElementById('mainView').style.display = 'none';
+        document.getElementById('printView').style.display = 'block';
       },
 
-      closePrint(){
-        document.getElementById('mainView').style.display='block';
-        document.getElementById('printView').style.display='none';
+      closePrint() {
+        document.getElementById('mainView').style.display = 'block';
+        document.getElementById('printView').style.display = 'none';
       },
 
-      showSaveDialog(){
+      showSaveDialog() {
         const name = prompt('Enter report name:');
-        if (!name || !name.trim()) return;
-        const data = {
-          name: name.trim(),
-          date: new Date().toISOString(),
-          collectionWeek: document.getElementById('collectionWeek').value,
-          calculators: this.calculators
-        };
-        localStorage.setItem('report_'+Date.now(), JSON.stringify(data));
-        alert('Report saved!');
+        if (name && name.trim()) {
+          const data = {
+            name: name.trim(),
+            date: new Date().toISOString(),
+            collectionWeek: document.getElementById('collectionWeek').value,
+            calculators: this.calculators
+          };
+          const key = 'report_' + Date.now();
+          localStorage.setItem(key, JSON.stringify(data));
+          alert('Report saved!');
+        }
       }
     };
 
-    // define first, then register the listener (prevents “app is not defined”)
     window.addEventListener('DOMContentLoaded', () => app.init());
   </script>
 </body>
