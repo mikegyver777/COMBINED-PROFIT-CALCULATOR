@@ -50,6 +50,11 @@
     .tier-box .tier-label{ font-size:10px; font-weight:600; } .tier-box .tier-value{ font-size:16px; font-weight:700; }
     @media print { .no-print{ display:none !important; } .print-view{ display:block !important; } }
     .print-view { display:none; }
+    /* Bottom Totals styling */
+    .bottom-totals { margin: 18px 0 8px 0; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+    .bottom-card { background:#fff; border:2px solid #e0e0e0; border-radius:10px; padding:14px; text-align:center; }
+    .bottom-card .label { font-size:12px; font-weight:700; color:#555; margin-bottom:6px; }
+    .bottom-card .value { font-size:22px; font-weight:800; }
   </style>
 </head>
 <body>
@@ -71,6 +76,9 @@
       <div id="summaryCards" class="summary-cards"></div>
       <div id="calculators"></div>
 
+      <!-- NEW: Bottom Totals goes here -->
+      <div id="bottomTotals" class="bottom-totals"></div>
+
       <div style="text-align:center;">
         <button id="addBtn" class="add-btn"><span style="font-size:24px;">+</span> ADD NEW FILE</button>
       </div>
@@ -80,24 +88,18 @@
   </div>
 
   <script>
-    const state = {
-      calculators: [],
-      nextId: 1
-    };
+    const state = { calculators: [], nextId: 1 };
 
-    // ---------- Utilities ----------
-    const fmt = (value) => {
-      const n = Number.isFinite(value) ? value : parseFloat(value || 0);
+    // ---- Utils ----
+    const fmt = v => {
+      const n = Number.isFinite(v) ? v : parseFloat(v || 0);
       return '$' + (n || 0).toFixed(2).replace(/\B(?=(\\d{3})+(?!\\d))/g, ',');
     };
-
-    const parseValue = (value) => {
-      if (value === undefined || value === null) return 0;
-      const parsed = parseFloat(String(value).replace(/[,$%]/g, '').trim());
-      return Number.isFinite(parsed) ? parsed : 0;
+    const parseValue = v => {
+      if (v === undefined || v === null) return 0;
+      const p = parseFloat(String(v).replace(/[,$%]/g,'').trim());
+      return Number.isFinite(p) ? p : 0;
     };
-
-    // feeInput can be %, decimal fraction, or absolute $; baseAmount scoping (% of base)
     const parseFeeAmount = (baseAmount, feeInput) => {
       const base = parseValue(baseAmount);
       if (!feeInput && feeInput !== 0) return 0;
@@ -107,27 +109,27 @@
       const hasDol = raw.includes('$');
       const num = parseValue(raw);
       if (hasDol) return num;
-      if (hasPct) return (base * num) / 100;  // "3.5%"
-      if (num > 100) return num;              // looks like $150
-      if (num > 1) return (base * num) / 100; // "3.5"
-      if (num > 0) return base * num;         // "0.035"
+      if (hasPct) return (base * num) / 100;
+      if (num > 100) return num;
+      if (num > 1) return (base * num) / 100;
+      if (num > 0) return base * num;
       return 0;
     };
 
+    // ---- Math core ----
     const calculateOne = (c) => {
       const contractAmount   = parseValue(c.contractAmount);
       const laborMaterial    = parseValue(c.laborMaterial);
       const houseFeePercent  = parseValue(c.houseFeePercent);
       const houseFeeAmount   = (contractAmount * houseFeePercent) / 100;
 
-      const dealerFeeAmount      = parseFeeAmount(c.financeAmount, c.dealerFee);     // % of financeAmount or $
-      const creditCardFeeAmount  = parseFeeAmount(c.creditCard, c.creditCardFee);    // % of credit card or $
+      const dealerFeeAmount     = parseFeeAmount(c.financeAmount, c.dealerFee);
+      const creditCardFeeAmount = parseFeeAmount(c.creditCard, c.creditCardFee);
 
       const afterHouseFee    = contractAmount - houseFeeAmount;
       const totalAfterFees   = afterHouseFee - laborMaterial - dealerFeeAmount;
       const percentOfContract= afterHouseFee > 0 ? (totalAfterFees / afterHouseFee) * 100 : 0;
 
-      // Tier rates
       let vetRate = 25;
       if (percentOfContract >= 50)      vetRate = 55;
       else if (percentOfContract >= 40) vetRate = 45;
@@ -138,23 +140,20 @@
       else if (percentOfContract >= 40) repRate = 30;
       else if (percentOfContract >= 33) repRate = 25;
 
-      const vetsCount = parseValue(c.numVets);
-      const repsCount = parseValue(c.numReps);
+      const vetsCount   = parseValue(c.numVets);
+      const repsCount   = parseValue(c.numReps);
       const totalPeople = Math.max(0, vetsCount + repsCount);
 
       const vetCommissionTotal = (totalAfterFees * vetRate) / 100;
       const repCommissionTotal = (totalAfterFees * repRate) / 100;
 
-      // Ride along
-      const rideAlongCount      = parseValue(c.numRideAlongs);
-      const rideAlongFeeEach    = parseValue(c.rideAlong);
-      const rideAlongBonus      = parseValue(c.rideAlongBonus);
-      const totalRideAlongFee   = rideAlongFeeEach * rideAlongCount;
-      const totalRideAlongPayout= totalRideAlongFee + rideAlongBonus;
+      const rideAlongCount     = parseValue(c.numRideAlongs);
+      const rideAlongFeeEach   = parseValue(c.rideAlong);
+      const rideAlongBonus     = parseValue(c.rideAlongBonus);
+      const totalRideAlongFee  = rideAlongFeeEach * rideAlongCount;
+      const totalRideAlongPayout = totalRideAlongFee + rideAlongBonus;
 
-      // Spread CC + ride-along fee across all Vets+Reps
       const perPersonSharedFees = totalPeople > 0 ? (creditCardFeeAmount + totalRideAlongFee) / totalPeople : 0;
-
       const perVetBase = totalPeople > 0 ? (vetCommissionTotal / totalPeople) : 0;
       const perRepBase = totalPeople > 0 ? (repCommissionTotal / totalPeople) : 0;
 
@@ -166,7 +165,6 @@
       const altaCalTotalPayout = laborMaterial + finalTotalVetsPayout + finalTotalRepsPayout + totalRideAlongPayout + creditCardFeeAmount;
       const preliminaryProfit  = afterHouseFee - altaCalTotalPayout - dealerFeeAmount;
 
-      // Additional team payouts
       const canvasserPayout = preliminaryProfit * (parseValue(c.canvasserPercent) / 100);
       const confirmerPayout = contractAmount   * (parseValue(c.confirmerPercent) / 100);
       const elisoPayout     = contractAmount   * (parseValue(c.elisoPercent) / 100);
@@ -190,20 +188,19 @@
       };
     };
 
-    // ---------- Rendering ----------
+    // ---- Rendering ----
     const calculatorsDiv = () => document.getElementById('calculators');
+
+    const optSel = (cur, val) => cur === val ? 'selected' : '';
 
     const renderCalculator = (c, index) => {
       const d = calculateOne(c);
-      const deleteBtn = state.calculators.length > 1
-        ? `<button class="delete-btn" data-role="delete" data-id="${c.id}">×</button>`
-        : '';
-
-      const opt = (cur, val) => cur === val ? 'selected' : '';
+      const delBtn = state.calculators.length > 1
+        ? `<button class="delete-btn" data-role="delete" data-id="${c.id}">×</button>` : '';
 
       return `
         <div class="calculator" data-calc-id="${c.id}">
-          ${deleteBtn}
+          ${delBtn}
           <div class="calc-header">
             <h2 style="font-size:18px; font-weight:700;">FILE #${index + 1}</h2>
             <button class="btn btn-blue" data-role="print-single" data-index="${index}" style="padding:10px 16px;">🖨️</button>
@@ -225,4 +222,485 @@
               <div class="section-header blue">CONTRACT & PAYMENT</div>
               <div class="section-content">
                 <div class="form-grid">
-                  <d
+                  <div class="form-group">
+                    <label>CONTRACT AMOUNT</label>
+                    <div class="input-with-symbol"><span>$</span>
+                      <input type="text" data-field="contractAmount" value="${c.contractAmount ?? ''}" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>CASH/CHECK</label>
+                    <div class="input-with-symbol"><span>$</span>
+                      <input type="text" data-field="cashCheck" value="${c.cashCheck ?? ''}" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>LABOR & MATERIAL</label>
+                    <div class="input-with-symbol"><span>$</span>
+                      <input type="text" data-field="laborMaterial" value="${c.laborMaterial ?? ''}" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>FINANCE AMOUNT</label>
+                    <div class="input-with-symbol"><span>$</span>
+                      <input type="text" data-field="financeAmount" value="${c.financeAmount ?? ''}" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>DEALER FEE (% or $)</label>
+                    <input type="text" data-field="dealerFee" value="${c.dealerFee ?? ''}" placeholder="3.5 or $150" />
+                    ${d.dealerFeeAmount > 0 ? `<div style="text-align:center; font-weight:600; margin-top:5px; color:#2196F3;">${fmt(d.dealerFeeAmount)}</div>` : ''}
+                  </div>
+                  <div class="form-group">
+                    <label>HOUSE FEE %</label>
+                    <div class="input-with-symbol">
+                      <input type="text" data-field="houseFeePercent" value="${c.houseFeePercent ?? ''}" /><span>%</span>
+                    </div>
+                    ${d.houseFeeAmount > 0 ? `<div style="text-align:center; font-weight:600; margin-top:5px;">${fmt(d.houseFeeAmount)}</div>` : ''}
+                  </div>
+                  <div class="form-group">
+                    <label>CREDIT CARD</label>
+                    <div class="input-with-symbol"><span>$</span>
+                      <input type="text" data-field="creditCard" value="${c.creditCard ?? ''}" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>CC FEE (% or $)</label>
+                    <input type="text" data-field="creditCardFee" value="${c.creditCardFee ?? ''}" placeholder="3.5 or $35" />
+                    ${d.creditCardFeeAmount > 0 ? `<div style="text-align:center; font-weight:600; margin-top:5px; color:#2196F3;">${fmt(d.creditCardFeeAmount)}</div>` : ''}
+                  </div>
+                  <div class="form-group">
+                    <label>AFTER HOUSE FEE</label>
+                    <div style="text-align:center; padding:15px; background:#BBDEFB; border-radius:6px; font-weight:700; font-size:18px;">
+                      ${fmt(d.afterHouseFee)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-header green">ALTA CAL TEAM</div>
+              <div class="section-content">
+                <div class="form-grid" style="margin-bottom:10px;">
+                  <div class="form-group">
+                    <label>VETS ON CONTRACT</label>
+                    <input type="text" data-field="numVets" value="${c.numVets ?? ''}" style="text-align:center; font-size:18px;" />
+                  </div>
+                  <div class="form-group">
+                    <label>REPS ON CONTRACT</label>
+                    <input type="text" data-field="numReps" value="${c.numReps ?? ''}" style="text-align:center; font-size:18px;" />
+                  </div>
+                  <div class="form-group">
+                    <label>RIDE ALONGS</label>
+                    <input type="text" data-field="numRideAlongs" value="${c.numRideAlongs ?? ''}" style="text-align:center; font-size:18px;" />
+                  </div>
+                </div>
+
+                ${(d.vetsCount > 0 || d.repsCount > 0) ? `
+                  <div class="tier-results">
+                    <div class="tier-info">
+                      Profit: ${d.percentOfContract.toFixed(1)}% → Vet: ${d.vetRate}% | Rep: ${d.repRate}%
+                    </div>
+                    <div class="tier-grid">
+                      ${d.vetsCount > 0 ? `
+                        <div class="tier-person">
+                          <div style="font-weight:700; text-align:center; margin-bottom:8px;">VETS: ${d.vetsCount}</div>
+                          <div class="tier-box light"><div class="tier-label">Per Vet</div><div class="tier-value" style="color:#2E7D32;">${fmt(d.finalPerVetPayout)}</div></div>
+                          <div class="tier-box bold"><div class="tier-label">Total</div><div class="tier-value" style="color:#1B5E20;">${fmt(d.finalTotalVetsPayout)}</div></div>
+                        </div>` : ''}
+                      ${d.repsCount > 0 ? `
+                        <div class="tier-person">
+                          <div style="font-weight:700; text-align:center; margin-bottom:8px;">REPS: ${d.repsCount}</div>
+                          <div class="tier-box purple-light"><div class="tier-label">Per Rep</div><div class="tier-value" style="color:#6A1B9A;">${fmt(d.finalPerRepPayout)}</div></div>
+                          <div class="tier-box purple-bold"><div class="tier-label">Total</div><div class="tier-value" style="color:#4A148C;">${fmt(d.finalTotalRepsPayout)}</div></div>
+                        </div>` : ''}
+                    </div>
+                  </div>` : ''}
+
+                <div class="form-grid" style="margin-top:10px;">
+                  <div class="form-group">
+                    <label style="color:#D32F2F;">RIDE ALONG FEE (each)</label>
+                    <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;">
+                      <span>$</span><input type="text" data-field="rideAlong" value="${c.rideAlong ?? ''}" style="background:transparent;" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label style="color:#D32F2F;">RIDE ALONG BONUS (flat)</label>
+                    <div class="input-with-symbol" style="background:#FFEBEE; border-color:#EF5350;">
+                      <span>$</span><input type="text" data-field="rideAlongBonus" value="${c.rideAlongBonus ?? ''}" style="background:transparent;" />
+                    </div>
+                  </div>
+                  ${d.numRideAlongs > 0 ? `
+                    <div class="form-group">
+                      <label>RIDE ALONG PAYOUT</label>
+                      <div style="text-align:center; padding:12px; background:#FFCDD2; border:2px solid #EF5350; border-radius:6px; font-weight:700; font-size:16px;">
+                        ${fmt(d.totalRideAlongPayout)}
+                      </div>
+                    </div>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-header purple">ADDITIONAL TEAM</div>
+              <div class="section-content">
+                <div style="text-align:center; padding:12px; background:#E1BEE7; border:2px solid #9C27B0; border-radius:6px; font-weight:700; margin-bottom:12px;">
+                  <div style="font-size:11px; margin-bottom:4px;">ALTA CAL PROFIT</div>
+                  <div style="font-size:18px;">${fmt(d.preliminaryProfit)}</div>
+                </div>
+
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>CANVASSER %</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <input type="text" data-field="canvasserPercent" value="${c.canvasserPercent ?? '2'}" style="width:70px;" />
+                      <span style="font-size:13px;">% = ${fmt(d.canvasserPayout)}</span>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>CONFIRMER %</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <input type="text" data-field="confirmerPercent" value="${c.confirmerPercent ?? '0.25'}" style="width:70px;" />
+                      <span style="font-size:13px;">% = ${fmt(d.confirmerPayout)}</span>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>ELISO %</label>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <input type="text" data-field="elisoPercent" value="${c.elisoPercent ?? '1.5'}" style="width:70px;" />
+                      <span style="font-size:13px;">% = ${fmt(d.elisoPayout)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-grid" style="margin-top:12px;">
+                  <div class="form-group">
+                    <label>PROD MS</label>
+                    <div style="display:flex; gap:6px; align-items:center; font-size:13px;">
+                      <input type="text" data-field="prodMSPercent" value="${c.prodMSPercent ?? '0.25'}" style="width:50px;" /><span>%</span>
+                      <input type="text" data-field="prodMSAmount"  value="${c.prodMSAmount ?? ''}" style="width:80px;" />
+                      <span>= ${fmt(d.prodMSPayout)}</span>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>PROD RS</label>
+                    <div style="display:flex; gap:6px; align-items:center; font-size:13px;">
+                      <input type="text" data-field="prodRSPercent" value="${c.prodRSPercent ?? '0.25'}" style="width:50px;" /><span>%</span>
+                      <input type="text" data-field="prodRSAmount"  value="${c.prodRSAmount ?? ''}" style="width:80px;" />
+                      <span>= ${fmt(d.prodRSPayout)}</span>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>PROD NC</label>
+                    <div style="display:flex; gap:6px; align-items:center; font-size:13px;">
+                      <input type="text" data-field="prodNCPercent" value="${c.prodNCPercent ?? '0.25'}" style="width:50px;" /><span>%</span>
+                      <input type="text" data-field="prodNCAmount"  value="${c.prodNCAmount ?? ''}" style="width:80px;" />
+                      <span>= ${fmt(d.prodNCPayout)}</span>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>PROD ABE</label>
+                    <div style="display:flex; gap:6px; align-items:center; font-size:13px;">
+                      <input type="text" data-field="prodABEPercent" value="${c.prodABEPercent ?? '0.25'}" style="width:50px;" /><span>%</span>
+                      <input type="text" data-field="prodABEAmount"  value="${c.prodABEAmount ?? ''}" style="width:80px;" />
+                      <span>= ${fmt(d.prodABEPayout)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-header yellow">FINANCE & BANK</div>
+              <div class="section-content">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>MONEY THIS WEEK</label>
+                    <div class="input-with-symbol"><span>$</span>
+                      <input type="text" data-field="moneyThisWeek" value="${c.moneyThisWeek ?? ''}" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>FINANCE SOURCE</label>
+                    <select data-field="financeSource">
+                      <option value="" ${optSel(c.financeSource ?? '', '')}>Select</option>
+                      <option value="Finance" ${optSel(c.financeSource ?? '', 'Finance')}>Finance</option>
+                      <option value="Cash"    ${optSel(c.financeSource ?? '', 'Cash')}>Cash</option>
+                      <option value="Both"    ${optSel(c.financeSource ?? '', 'Both')}>Both</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>BANK DROP DAY</label>
+                    <select data-field="bankDropDay">
+                      <option value="" ${optSel(c.bankDropDay ?? '', '')}>Select Day</option>
+                      <option value="Monday"    ${optSel(c.bankDropDay ?? '', 'Monday')}>Monday</option>
+                      <option value="Tuesday"   ${optSel(c.bankDropDay ?? '', 'Tuesday')}>Tuesday</option>
+                      <option value="Wednesday" ${optSel(c.bankDropDay ?? '', 'Wednesday')}>Wednesday</option>
+                      <option value="Thursday"  ${optSel(c.bankDropDay ?? '', 'Thursday')}>Thursday</option>
+                      <option value="Friday"    ${optSel(c.bankDropDay ?? '', 'Friday')}>Friday</option>
+                      <option value="Saturday"  ${optSel(c.bankDropDay ?? '', 'Saturday')}>Saturday</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px;">
+              <div class="big-card" style="--c1:#42A5F5;--c2:#2196F3;">
+                <div class="label">ALTA CAL PAYOUT</div>
+                <div class="value">${fmt(d.totalTeamPayout)}</div>
+              </div>
+              <div class="big-card" style="--c1:#4CAF50;--c2:#45a049;">
+                <div class="label">ALTA CAL PROFIT</div>
+                <div class="value">${fmt(d.finalProfit)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const renderSummary = () => {
+      const agg = aggregateTotals();
+      document.getElementById('summaryCards').innerHTML = `
+        <div class="summary-card blue"><div class="label">TOTAL PAYOUT</div><div class="value">${fmt(agg.totalPayout)}</div></div>
+        <div class="summary-card purple"><div class="label">TOTAL PROFIT</div><div class="value">${fmt(agg.totalProfit)}</div></div>
+        <div class="summary-card green"><div class="label">PROFIT %</div><div class="value">${agg.profitPercent.toFixed(2)}%</div></div>
+        <div class="summary-card red"><div class="label">MONEY THIS WEEK</div><div class="value">${fmt(agg.totalMoney)}</div></div>
+      `;
+    };
+
+    // NEW: Bottom totals renderer
+    const renderBottomTotals = () => {
+      const agg = aggregateTotals();
+      document.getElementById('bottomTotals').innerHTML = `
+        <div class="bottom-card"><div class="label">TOTAL PAYOUT</div><div class="value">${fmt(agg.totalPayout)}</div></div>
+        <div class="bottom-card"><div class="label">TOTAL PROFIT</div><div class="value">${fmt(agg.totalProfit)}</div></div>
+        <div class="bottom-card"><div class="label">PROFIT %</div><div class="value">${agg.profitPercent.toFixed(2)}%</div></div>
+        <div class="bottom-card"><div class="label">MONEY THIS WEEK</div><div class="value">${fmt(agg.totalMoney)}</div></div>
+      `;
+    };
+
+    const aggregateTotals = () => {
+      let totalPayout = 0, totalProfit = 0, totalMoney = 0, totalAfterHouse = 0;
+      state.calculators.forEach(c => {
+        const d = calculateOne(c);
+        totalPayout   += d.totalTeamPayout;
+        totalProfit   += d.finalProfit;
+        totalMoney    += parseValue(c.moneyThisWeek);
+        totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
+      });
+      const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
+      return { totalPayout, totalProfit, totalMoney, profitPercent };
+    };
+
+    const renderAll = () => {
+      calculatorsDiv().innerHTML = state.calculators.map((c,i) => renderCalculator(c,i)).join('');
+      renderSummary();
+      renderBottomTotals(); // ensure bottom totals are always in sync
+    };
+
+    // ---- Actions ----
+    const addCalculator = () => {
+      state.calculators.push({
+        id: state.nextId++,
+        customerName:'', jobNumber:'', contractAmount:'', cashCheck:'', financeAmount:'',
+        dealerFee:'', creditCard:'', creditCardFee:'', houseFeePercent:'', laborMaterial:'',
+        numVets:'', numReps:'', rideAlong:'', rideAlongBonus:'', numRideAlongs:'',
+        canvasserPercent:'2', confirmerPercent:'0.25', elisoPercent:'1.5',
+        prodMSPercent:'0.25', prodMSAmount:'', prodRSPercent:'0.25', prodRSAmount:'',
+        prodNCPercent:'0.25', prodNCAmount:'', prodABEPercent:'0.25', prodABEAmount:'',
+        moneyThisWeek:'', financeSource:'', bankDropDay:''
+      });
+      renderAll();
+    };
+
+    const deleteCalculator = (id) => {
+      if (state.calculators.length <= 1) { alert('Cannot delete the last calculator'); return; }
+      state.calculators = state.calculators.filter(c => c.id !== id);
+      renderAll();
+    };
+
+    const updateField = (calcId, field, value) => {
+      const c = state.calculators.find(x => x.id === calcId);
+      if (!c) return;
+      c[field] = value;
+      renderAll();
+    };
+
+    const printSingle = (index) => {
+      const c = state.calculators[index];
+      const d = calculateOne(c);
+      const week = document.getElementById('collectionWeek').value || 'Not Specified';
+      const block = `
+        <div style="padding:20px; font-size:11px;">
+          <h1 style="text-align:center; font-size:20px; margin-bottom:15px; border-bottom:2px solid #2196F3; padding-bottom:10px;">
+            FILE #${index + 1} - ${c.customerName || 'N/A'}
+          </h1>
+          ${week !== 'Not Specified' ? `<div style="text-align:center; font-weight:700; margin-bottom:15px;">Week: ${week}</div>` : ''}
+
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-bottom:15px;">
+            <div style="background:#BBDEFB; padding:10px; border-radius:4px;">
+              <strong>Contract:</strong> ${fmt(d.contractAmount)}<br>
+              <strong>After House:</strong> ${fmt(d.afterHouseFee)}
+            </div>
+            <div style="background:#C8E6C9; padding:10px; border-radius:4px;">
+              <strong>ALTA CAL Payout:</strong> ${fmt(d.totalTeamPayout)}<br>
+              <strong>Profit Rate:</strong> ${d.percentOfContract.toFixed(1)}%
+            </div>
+            <div style="background:#E1BEE7; padding:10px; border-radius:4px;">
+              <strong>ALTA CAL Profit:</strong> ${fmt(d.finalProfit)}<br>
+              <strong>Vet ${d.vetRate}% | Rep ${d.repRate}%</strong>
+            </div>
+          </div>
+
+          ${(d.vetsCount > 0 || d.repsCount > 0) ? `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+              ${d.vetsCount > 0 ? `
+                <div style="border:2px solid #4CAF50; padding:10px; border-radius:4px;">
+                  <div style="font-weight:700; margin-bottom:5px;">VETS: ${d.vetsCount}</div>
+                  <div>Per: ${fmt(d.finalPerVetPayout)}</div>
+                  <div><strong>Total: ${fmt(d.finalTotalVetsPayout)}</strong></div>
+                </div>` : ``}
+              ${d.repsCount > 0 ? `
+                <div style="border:2px solid #9C27B0; padding:10px; border-radius:4px;">
+                  <div style="font-weight:700; margin-bottom:5px;">REPS: ${d.repsCount}</div>
+                  <div>Per: ${fmt(d.finalPerRepPayout)}</div>
+                  <div><strong>Total: ${fmt(d.finalTotalRepsPayout)}</strong></div>
+                </div>` : ``}
+            </div>` : ``}
+
+          <div class="no-print" style="margin-top:20px; text-align:center;">
+            <button onclick="window.print()" style="background:#2196F3; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
+            <button id="closePrintBtn" style="background:#757575; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('printView').innerHTML = block;
+      document.getElementById('mainView').style.display = 'none';
+      document.getElementById('printView').style.display = 'block';
+      document.getElementById('closePrintBtn').onclick = () => {
+        document.getElementById('mainView').style.display = 'block';
+        document.getElementById('printView').style.display = 'none';
+      };
+    };
+
+    const showPrintReport = () => {
+      const week = document.getElementById('collectionWeek').value || 'Not Specified';
+      let totalPayout = 0, totalProfit = 0, totalMoney = 0, totalAfterHouse = 0, rows = '';
+      state.calculators.forEach((c, idx) => {
+        const d = calculateOne(c);
+        totalPayout   += d.totalTeamPayout;
+        totalProfit   += d.finalProfit;
+        totalMoney    += parseValue(c.moneyThisWeek);
+        totalAfterHouse += (d.afterHouseFee - d.dealerFeeAmount);
+        rows += `
+          <tr>
+            <td style="border:1px solid #000; padding:6px; text-align:center;">${idx + 1}</td>
+            <td style="border:1px solid #000; padding:6px;">${c.jobNumber || '-'}</td>
+            <td style="border:1px solid #000; padding:6px;">${c.customerName || '-'}</td>
+            <td style="border:1px solid #000; padding:6px; text-align:right;">${fmt(d.contractAmount)}</td>
+            <td style="border:1px solid #000; padding:6px; text-align:right;">${fmt(d.totalTeamPayout)}</td>
+            <td style="border:1px solid #000; padding:6px; text-align:right;">${fmt(d.finalProfit)}</td>
+            <td style="border:1px solid #000; padding:6px; text-align:right;">${d.profitPercent.toFixed(2)}%</td>
+            <td style="border:1px solid #000; padding:6px; text-align:right; font-weight:700;">${fmt(parseValue(c.moneyThisWeek))}</td>
+          </tr>`;
+      });
+      const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
+
+      const html = `
+        <div style="padding:20px; font-size:10px;">
+          <h1 style="text-align:center; font-size:18px; margin-bottom:10px;">COMBINED PROFIT REPORT</h1>
+          ${week !== 'Not Specified' ? `<h2 style="text-align:center; font-size:14px; margin-bottom:15px;">Week: ${week}</h2>` : ''}
+
+          <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:20px;">
+            <thead>
+              <tr style="background:#e0e0e0;">
+                <th style="border:1px solid #000; padding:8px;">#</th>
+                <th style="border:1px solid #000; padding:8px;">Job</th>
+                <th style="border:1px solid #000; padding:8px;">Customer</th>
+                <th style="border:1px solid #000; padding:8px;">Contract</th>
+                <th style="border:1px solid #000; padding:8px;">Payout</th>
+                <th style="border:1px solid #000; padding:8px;">Profit</th>
+                <th style="border:1px solid #000; padding:8px;">%</th>
+                <th style="border:1px solid #000; padding:8px;">This Week</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+              <tr style="background:#FFF9C4; font-weight:700;">
+                <td colspan="4" style="border:1px solid #000; padding:8px; text-align:right;">TOTALS:</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(totalPayout)}</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(totalProfit)}</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${profitPercent.toFixed(2)}%</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(totalMoney)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="no-print" style="margin-top:20px; text-align:center;">
+            <button onclick="window.print()" style="background:#2196F3; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-right:10px;">🖨️ PRINT</button>
+            <button id="closePrintBtn2" style="background:#757575; color:#fff; padding:12px 30px; border:none; border-radius:6px; font-size:16px; font-weight:700; cursor:pointer;">CLOSE</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('printView').innerHTML = html;
+      document.getElementById('mainView').style.display = 'none';
+      document.getElementById('printView').style.display = 'block';
+      document.getElementById('closePrintBtn2').onclick = () => {
+        document.getElementById('mainView').style.display = 'block';
+        document.getElementById('printView').style.display = 'none';
+      };
+    };
+
+    const saveDialog = () => {
+      const name = prompt('Enter report name:');
+      if (name && name.trim()) {
+        const data = {
+          name: name.trim(),
+          date: new Date().toISOString(),
+          collectionWeek: document.getElementById('collectionWeek').value,
+          calculators: state.calculators
+        };
+        localStorage.setItem('report_' + Date.now(), JSON.stringify(data));
+        alert('Report saved!');
+      }
+    };
+
+    // ---- Wiring ----
+    document.addEventListener('DOMContentLoaded', () => {
+      addCalculator();
+
+      document.getElementById('collectionWeek').addEventListener('input', () => {
+        renderSummary(); renderBottomTotals();
+      });
+
+      document.getElementById('addBtn').addEventListener('click', addCalculator);
+      document.getElementById('saveBtn').addEventListener('click', saveDialog);
+      document.getElementById('printReportBtn').addEventListener('click', showPrintReport);
+
+      document.getElementById('calculators').addEventListener('input', (e) => {
+        const wrap = e.target.closest('.calculator'); if (!wrap) return;
+        const id = parseInt(wrap.getAttribute('data-calc-id'), 10);
+        const field = e.target.getAttribute('data-field'); if (!field) return;
+        updateField(id, field, e.target.value);
+      });
+
+      document.getElementById('calculators').addEventListener('change', (e) => {
+        const wrap = e.target.closest('.calculator'); if (!wrap) return;
+        const id = parseInt(wrap.getAttribute('data-calc-id'), 10);
+        const field = e.target.getAttribute('data-field'); if (!field) return;
+        updateField(id, field, e.target.value);
+      });
+
+      document.getElementById('calculators').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-role]'); if (!btn) return;
+        const role = btn.getAttribute('data-role');
+        if (role === 'delete') deleteCalculator(parseInt(btn.getAttribute('data-id'),10));
+        if (role === 'print-single') printSingle(parseInt(btn.getAttribute('data-index'),10));
+      });
+    });
+  </script>
+</body>
+</html>
