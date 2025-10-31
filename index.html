@@ -1,9 +1,9 @@
 showPrintReport() {
-  console.log('PRINT v4'); // must appear in Console when you click PRINT
+  console.log('PRINT v5'); // must appear when you click PRINT
 
   const week = document.getElementById('collectionWeek').value || 'Not Specified';
 
-  // Build rows including Bank Drop Day
+  // Build rows with Bank Drop Day
   const rows = this.calculators.map((calc, idx) => {
     const d = this.calculateOne(calc);
     return {
@@ -27,8 +27,7 @@ showPrintReport() {
   };
   rows.sort((a,b) => {
     const ra = rank(a.bankDropDay), rb = rank(b.bankDropDay);
-    if (ra !== rb) return ra - rb;
-    return a.idx - b.idx;
+    return ra !== rb ? ra - rb : a.idx - b.idx;
   });
 
   // Totals
@@ -42,7 +41,7 @@ showPrintReport() {
   });
   const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
 
-  // Build sorted table with Bank Drop Day column
+  // Table rows (now includes Bank Drop Day)
   const rowsHTML = rows.map((r,i) => `
     <tr>
       <td style="border:1px solid #000; padding:6px; text-align:center;">${i+1}</td>
