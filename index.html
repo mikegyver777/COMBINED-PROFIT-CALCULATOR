@@ -8,7 +8,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f5f5f5; padding: 15px; }
-    input, select, button { font-size: 16px !important; } /* keep iOS from zooming */
+    input, select, button { font-size: 16px !important; }
 
     .container { max-width: 1400px; margin: 0 auto; }
     .btn { padding: 14px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
@@ -72,7 +72,7 @@
     .tier-box .tier-label { font-size: 10px; font-weight: 600; }
     .tier-box .tier-value { font-size: 16px; font-weight: 700; }
 
-    /* Slightly larger percentage inputs as requested */
+    /* slightly larger % inputs */
     .pct-input { width: 88px; text-align: right; }
 
     @media print { .no-print { display: none !important; } .print-view { display: block !important; } }
@@ -131,7 +131,6 @@
         return Number.isFinite(parsed) ? parsed : 0;
       },
 
-      // percent-or-dollar parser for fees
       parseFeeAmount(baseAmount, feeInput) {
         const base = this.parseValue(baseAmount);
         if (!feeInput && feeInput !== 0) return 0;
@@ -142,11 +141,11 @@
         const hasDol = raw.includes('$');
         const num = this.parseValue(raw);
 
-        if (hasDol) return num;                  // explicit dollars
-        if (hasPct) return (base * num) / 100;   // "3.5%"
-        if (num > 100) return num;               // looks like dollars
-        if (num > 1) return (base * num) / 100;  // e.g., 3.5
-        if (num > 0) return base * num;          // e.g., 0.035
+        if (hasDol) return num;
+        if (hasPct) return (base * num) / 100;
+        if (num > 100) return num;
+        if (num > 1) return (base * num) / 100;
+        if (num > 0) return base * num;
         return 0;
       },
 
@@ -156,14 +155,13 @@
         const houseFeePercent  = this.parseValue(data.houseFeePercent);
         const houseFeeAmount   = (contractAmount * houseFeePercent) / 100;
 
-        const dealerFeeAmount      = this.parseFeeAmount(data.financeAmount, data.dealerFee);
-        const creditCardFeeAmount  = this.parseFeeAmount(data.creditCard,     data.creditCardFee);
+        const dealerFeeAmount     = this.parseFeeAmount(data.financeAmount, data.dealerFee);
+        const creditCardFeeAmount = this.parseFeeAmount(data.creditCard, data.creditCardFee);
 
         const afterHouseFee   = contractAmount - houseFeeAmount;
         const totalAfterFees  = afterHouseFee - laborMaterial - dealerFeeAmount;
         const percentOfContract = afterHouseFee > 0 ? (totalAfterFees / afterHouseFee) * 100 : 0;
 
-        // Tiers
         let vetRate = 25;
         if (percentOfContract >= 50) vetRate = 55;
         else if (percentOfContract >= 40) vetRate = 45;
@@ -174,35 +172,32 @@
         else if (percentOfContract >= 40) repRate = 30;
         else if (percentOfContract >= 33) repRate = 25;
 
-        const vetsCount = this.parseValue(data.numVets);
-        const repsCount = this.parseValue(data.numReps);
+        const vetsCount   = this.parseValue(data.numVets);
+        const repsCount   = this.parseValue(data.numReps);
         const totalPeople = Math.max(0, vetsCount + repsCount);
 
         const vetCommissionTotal = (totalAfterFees * vetRate) / 100;
         const repCommissionTotal = (totalAfterFees * repRate) / 100;
 
-        // Ride-alongs
-        const rideAlongCount      = this.parseValue(data.numRideAlongs);
-        const rideAlongFeeEach    = this.parseValue(data.rideAlong);
-        const rideAlongBonusAmount= this.parseValue(data.rideAlongBonus);
-        const totalRideAlongFee   = rideAlongFeeEach * rideAlongCount;
-        const totalRideAlongPayout= totalRideAlongFee + rideAlongBonusAmount;
+        const rideAlongCount       = this.parseValue(data.numRideAlongs);
+        const rideAlongFeeEach     = this.parseValue(data.rideAlong);
+        const rideAlongBonusAmount = this.parseValue(data.rideAlongBonus);
+        const totalRideAlongFee    = rideAlongFeeEach * rideAlongCount;
+        const totalRideAlongPayout = totalRideAlongFee + rideAlongBonusAmount;
 
-        // Distribute shared fees across participants
-        const perPersonSharedFees = totalPeople > 0 ? (creditCardFeeAmount + totalRideAlongFee) / totalPeople : 0;
+        const perPersonSharedFees  = totalPeople > 0 ? (creditCardFeeAmount + totalRideAlongFee) / totalPeople : 0;
 
-        const perVetBase = totalPeople > 0 ? (vetCommissionTotal / totalPeople) : 0;
-        const perRepBase = totalPeople > 0 ? (repCommissionTotal / totalPeople) : 0;
+        const perVetBase           = totalPeople > 0 ? (vetCommissionTotal / totalPeople) : 0;
+        const perRepBase           = totalPeople > 0 ? (repCommissionTotal / totalPeople) : 0;
 
         const finalPerVetPayout    = perVetBase - perPersonSharedFees;
         const finalPerRepPayout    = perRepBase - perPersonSharedFees;
         const finalTotalVetsPayout = finalPerVetPayout * vetsCount;
         const finalTotalRepsPayout = finalPerRepPayout * repsCount;
 
-        const altaCalTotalPayout = laborMaterial + finalTotalVetsPayout + finalTotalRepsPayout + totalRideAlongPayout + creditCardFeeAmount;
-        const preliminaryProfit  = afterHouseFee - altaCalTotalPayout - dealerFeeAmount;
+        const altaCalTotalPayout   = laborMaterial + finalTotalVetsPayout + finalTotalRepsPayout + totalRideAlongPayout + creditCardFeeAmount;
+        const preliminaryProfit    = afterHouseFee - altaCalTotalPayout - dealerFeeAmount;
 
-        // Additional team payouts
         const canvasserPayout = preliminaryProfit * (this.parseValue(data.canvasserPercent) / 100);
         const confirmerPayout = contractAmount   * (this.parseValue(data.confirmerPercent) / 100);
         const elisoPayout     = contractAmount   * (this.parseValue(data.elisoPercent) / 100);
@@ -242,9 +237,7 @@
       },
 
       deleteCalculator(id) {
-        if (this.calculators.length <= 1) {
-          alert('Cannot delete the last calculator'); return;
-        }
+        if (this.calculators.length <= 1) { alert('Cannot delete the last calculator'); return; }
         if (confirm('Delete this calculator?')) {
           this.calculators = this.calculators.filter(c => c.id !== id);
           this.render();
@@ -255,8 +248,7 @@
         const calc = this.calculators.find(c => c.id === id);
         if (!calc) return;
         calc[field] = value;
-        // keep typing smooth; do not re-render whole form
-        this.updateSummary();
+        this.updateSummary(); // no re-render -> cursor stays
       },
 
       render() {
@@ -616,7 +608,6 @@
               <button onclick="app.closePrint()" style="background: #757575; color: white; padding: 12px 30px; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer;">CLOSE</button>
             </div>
           </div>`;
-
         document.getElementById('printView').innerHTML = html;
         document.getElementById('mainView').style.display = 'none';
         document.getElementById('printView').style.display = 'block';
@@ -644,110 +635,49 @@
               <td style="border: 1px solid #000; padding: 6px; text-align: right;">${this.fmt(data.finalProfit)}</td>
               <td style="border: 1px solid #000; padding: 6px; text-align: right;">${data.profitPercent.toFixed(2)}%</td>
               <td style="border: 1px solid #000; padding: 6px; text-align: right; font-weight: 700;">${this.fmt(this.parseValue(calc.moneyThisWeek))}</td>
+              <td style="border: 1px solid #000; padding: 6px; text-align: center;">${calc.bankDropDay || '-'}</td>
             </tr>`;
         });
 
         const profitPercent = totalAfterHouse > 0 ? (totalProfit / totalAfterHouse) * 100 : 0;
 
-        /* Main table */
-        const tableHTML = `
-          <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 20px;">
-            <thead>
-              <tr style="background: #e0e0e0;">
-                <th style="border: 1px solid #000; padding: 8px;">#</th>
-                <th style="border: 1px solid #000; padding: 8px;">Job</th>
-                <th style="border: 1px solid #000; padding: 8px;">Customer</th>
-                <th style="border: 1px solid #000; padding: 8px;">Contract</th>
-                <th style="border: 1px solid #000; padding: 8px;">Payout</th>
-                <th style="border: 1px solid #000; padding: 8px;">Profit</th>
-                <th style="border: 1px solid #000; padding: 8px;">%</th>
-                <th style="border: 1px solid #000; padding: 8px;">This Week</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-              <tr style="background: #FFF9C4; font-weight: 700;">
-                <td colspan="4" style="border: 1px solid #000; padding: 8px; text-align: right;">TOTALS:</td>
-                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalPayout)}</td>
-                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalProfit)}</td>
-                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${profitPercent.toFixed(2)}%</td>
-                <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalMoney)}</td>
-              </tr>
-            </tbody>
-          </table>`;
-
-        /* Grouped by Bank Drop Day (Mon→Sat then Unassigned) */
-        const grouped = {};
-        DAYS.forEach(d => grouped[d] = []);
-        grouped['Unassigned'] = [];
-
-        this.calculators.forEach((c, i) => {
-          const d = this.calculateOne(c);
-          const key = (c.bankDropDay && DAYS.includes(c.bankDropDay)) ? c.bankDropDay : 'Unassigned';
-          grouped[key].push({
-            idx: i + 1,
-            job: c.jobNumber || '-',
-            cust: c.customerName || '-',
-            contract: this.fmt(d.contractAmount),
-            payout: this.fmt(d.totalTeamPayout),
-            profit: this.fmt(d.finalProfit),
-            pct: d.profitPercent.toFixed(2) + '%',
-            week: this.fmt(this.parseValue(c.moneyThisWeek))
-          });
-        });
-
-        const orderedKeys = DAYS.concat('Unassigned').filter(day => grouped[day].length > 0);
-
-        const groupedBlocks = orderedKeys.map(day => `
-          <div style="margin-top:16px;">
-            <div style="background:#f0f0f0;padding:8px 12px;font-weight:700;border:1px solid #bbb;border-radius:6px 6px 0 0;">
-              ${day}
-            </div>
-            <table style="width:100%; border-collapse: collapse; border: 1px solid #bbb; border-top: none; margin-bottom: 8px;">
-              <thead>
-                <tr style="background:#eee;">
-                  <th style="border:1px solid #bbb; padding:6px; width:40px;">#</th>
-                  <th style="border:1px solid #bbb; padding:6px;">Job</th>
-                  <th style="border:1px solid #bbb; padding:6px;">Customer</th>
-                  <th style="border:1px solid #bbb; padding:6px; text-align:right;">Contract</th>
-                  <th style="border:1px solid #bbb; padding:6px; text-align:right;">Payout</th>
-                  <th style="border:1px solid #bbb; padding:6px; text-align:right;">Profit</th>
-                  <th style="border:1px solid #bbb; padding:6px; text-align:right;">%</th>
-                  <th style="border:1px solid #bbb; padding:6px; text-align:right;">This Week</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${grouped[day].map(r => `
-                  <tr>
-                    <td style="border:1px solid #bbb; padding:6px; text-align:center;">${r.idx}</td>
-                    <td style="border:1px solid #bbb; padding:6px;">${r.job}</td>
-                    <td style="border:1px solid #bbb; padding:6px;">${r.cust}</td>
-                    <td style="border:1px solid #bbb; padding:6px; text-align:right;">${r.contract}</td>
-                    <td style="border:1px solid #bbb; padding:6px; text-align:right;">${r.payout}</td>
-                    <td style="border:1px solid #bbb; padding:6px; text-align:right;">${r.profit}</td>
-                    <td style="border:1px solid #bbb; padding:6px; text-align:right;">${r.pct}</td>
-                    <td style="border:1px solid #bbb; padding:6px; text-align:right;">${r.week}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `).join('');
-
         const html = `
           <div style="padding: 20px; font-size: 10px;">
             <h1 style="text-align: center; font-size: 18px; margin-bottom: 10px;">COMBINED PROFIT REPORT</h1>
             ${week !== 'Not Specified' ? `<h2 style="text-align: center; font-size: 14px; margin-bottom: 15px;">Week: ${week}</h2>` : ''}
-            ${tableHTML}
-            <h3 style="margin-top:18px;margin-bottom:8px;">Bank Drop Day — Grouped</h3>
-            ${groupedBlocks || `<div style="color:#777;">No bank drop day data.</div>`}
+
+            <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 20px;">
+              <thead>
+                <tr style="background: #e0e0e0;">
+                  <th style="border: 1px solid #000; padding: 8px;">#</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Job</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Customer</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Contract</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Payout</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Profit</th>
+                  <th style="border: 1px solid #000; padding: 8px;">%</th>
+                  <th style="border: 1px solid #000; padding: 8px;">This Week</th>
+                  <th style="border: 1px solid #000; padding: 8px;">Bank Day</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+                <tr style="background: #FFF9C4; font-weight: 700;">
+                  <td colspan="4" style="border: 1px solid #000; padding: 8px; text-align: right;">TOTALS:</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalPayout)}</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalProfit)}</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: right;">${profitPercent.toFixed(2)}%</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: right;">${this.fmt(totalMoney)}</td>
+                  <td style="border: 1px solid #000; padding: 8px; text-align: center;">—</td>
+                </tr>
+              </tbody>
+            </table>
 
             <div class="no-print" style="margin-top: 20px; text-align: center;">
               <button onclick="window.print()" style="background: #2196F3; color: white; padding: 12px 30px; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; margin-right: 10px;">🖨️ PRINT</button>
               <button onclick="app.closePrint()" style="background: #757575; color: white; padding: 12px 30px; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer;">CLOSE</button>
             </div>
-          </div>
-        `;
+          </div>`;
 
         document.getElementById('printView').innerHTML = html;
         document.getElementById('mainView').style.display = 'none';
