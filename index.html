@@ -244,12 +244,12 @@
         }
       },
 
-      updateField(id, field, value) {
-        const calc = this.calculators.find(c => c.id === id);
-        if (!calc) return;
-        calc[field] = value;
-        this.updateSummary(); // no re-render -> cursor stays
-      },
+     updateField(id, field, value) {
+  const calc = this.calculators.find(c => c.id === id);
+  if (!calc) return;
+  calc[field] = value;
+  this.render();        // ← was this.updateSummary();
+}
 
       render() {
         const container = document.getElementById('calculators');
