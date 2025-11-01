@@ -859,6 +859,7 @@
                 // Generate daily breakdown summary
                 let dailyBreakdown = '<div style="margin-top: 25px; background: #e3f2fd; padding: 15px; border-radius: 8px; border: 2px solid #2196F3;"><h3 style="text-align: center; margin-bottom: 15px; font-size: 14px;">DAILY BREAKDOWN BY BANK DROP DAY</h3>';
                 
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                 days.forEach(day => {
                     if (dailyTotals[day].total > 0) {
                         dailyBreakdown += `
@@ -947,6 +948,9 @@
                 }
             }
         };
+
+        /* ----- REQUIRED for GitHub Pages inline onclick handlers ----- */
+        window.app = app;
         
         window.addEventListener('DOMContentLoaded', () => app.init());
     </script>
