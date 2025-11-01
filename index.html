@@ -244,11 +244,11 @@
         }
       },
 
-     updateField(id, field, value) {
+updateField(id, field, value) {
   const calc = this.calculators.find(c => c.id === id);
   if (!calc) return;
   calc[field] = value;
-  this.render();        // ← was this.updateSummary();
+  this.render();        // ← was: this.updateSummary();
 }
 
       render() {
